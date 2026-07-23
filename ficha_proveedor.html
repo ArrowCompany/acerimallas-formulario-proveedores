@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ficha de Proveedor - Acerimallas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-10">
+  <div class="max-w-3xl mx-auto px-6">
+
+    <a href="panel_principal_secretaria.html" class="inline-flex items-center gap-2 mb-6 text-[var(--text-secondary)] hover:text-[var(--accent)]">
+      <i class="fa-solid fa-arrow-left"></i> Volver al panel
+    </a>
+
+    <div id="fichaContainer" class="card p-8"></div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script>
+    // Obtiene el id del proveedor desde la URL: ficha_proveedor.html?id=xxxx
+    const params = new URLSearchParams(window.location.search);
+    const proveedorId = params.get('id');
+    let proveedorActual = null;
+
+    // Campos del formulario de 25 preguntas (etiqueta visible + llave en el objeto proveedor)
+    const CAMPOS = [
+      { key: 'tipoProveedor', label: 'Tipo de proveedor' },
+      { key: 'razonSocial', label: 'Razón social' },
+      { key: 'nombreComercial', label: 'Nombre comercial' },
+      { key: 'ruc', label: 'RUC' },
+      { key: 'archivoRuc', label: 'RUC actualizado / SRI (PDF)' },
+      { key: 'telefono1', label: 'Teléfono 1' },
+      { key: 'telefono2', label: 'Teléfono 2' },
+      { key: 'ciudad', label: 'Ciudad' },
+      { key: 'provincia', label: 'Provincia' },
+      { key: 'correoRetenciones', label: 'Correo (retenciones)' },
+      { key: 'direccion', label: 'Dirección' },
+      { key: 'representanteLegal', label: 'Representante legal' },
+      { key: 'archivoRepLegal', label: 'Documento representante legal (PDF)' },
+      { key: 'archivoNombramiento', label: 'Nombramiento representante (PDF)' },
+      { key: 'contacto1', label: 'Contacto adicional 1' },
+      { key: 'contacto2', label: 'Contacto adicional 2' },
+      { key: 'formaPago', label: 'Forma de pago' },
+      { key: 'entidadBancaria', label: 'Entidad bancaria' },
+      { key: 'tipoCuenta', label: 'Tipo de cuenta' },
+      { key: 'numeroCuenta', label: 'Número de cuenta' },
+      { key: 'titularCuenta', label: 'Titular de la cuenta' },
+      { key: 'certificadoBancario', label: 'Certificado bancario (PDF)' },
+      { key: 'area', label: 'Área de servicio' },
+    ];
+
+    function badgeFor(estado) {
+      if (estado === 'verificado') return `<span class="status-verificado">Verificado</span>`;
+      if (estado === 'no-verificado') return `<span class="status-no-verificado">No verificado</span>`;
+      return `<span class="status-pendiente">Pendiente</span>`;
+    }
+
+    async function render() {
+      document.getElementById('fichaContainer').innerHTML = `<p class="text-sm text-[var(--text-muted)]">Cargando ficha...</p>`;
+      const proveedores = await getProveedores();
+      const p = proveedores.find(x => String(x.id) === String(proveedorId));
+      proveedorActual = p;
+      const container = document.getElementById('fichaContainer');
+
+      if (!p) {
+        container.innerHTML = `<p>Proveedor no encontrado.</p>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h1 class="title-font text-2xl font-semibold">${p.razonSocial}</h1>
+            <div class="mt-2">${badgeFor(p.estado)}</div>
+          </div>
+        </div>
+
+        <p class="text-sm text-[var(--text-secondary)] mb-4">Marca la casilla del campo que tenga error</p>
+
+        <div class="border border-[var(--border)] rounded-2xl overflow-hidden mb-8">
+          ${CAMPOS.map((c, i) => `
+            <div class="flex items-center gap-3 px-4 py-3 ${i < CAMPOS.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+              <input type="checkbox" class="w-auto campo-error" data-key="${c.key}" ${p.camposConError.includes(c.key) ? 'checked' : ''}>
+              <span class="text-sm text-[var(--text-muted)] w-48 flex-shrink-0">${c.label}</span>
+              <span class="text-sm flex-1">${p[c.key] || '<span class="text-[var(--text-danger)]">(vacío)</span>'}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="flex gap-4">
+          <button onclick="marcarEstado('verificado')" class="flex-1 btn-primary flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check"></i> Verificado
+          </button>
+          <button onclick="marcarEstado('no-verificado')" class="flex-1 btn-danger flex items-center justify-center gap-2">
+            <i class="fa-solid fa-xmark"></i> No verificado
+          </button>
+        </div>
+      `;
+    }
+
+    async function marcarEstado(nuevoEstado) {
+      if (!proveedorActual) return;
+      const camposConError = Array.from(document.querySelectorAll('.campo-error:checked')).map(el => el.dataset.key);
+
+      if (nuevoEstado === 'no-verificado' && camposConError.length === 0) {
+        alert('Marca al menos un campo con error antes de rechazar la verificación.');
+        return;
+      }
+
+      const botones = document.querySelectorAll('.flex.gap-4 button');
+      botones.forEach(b => b.disabled = true);
+
+      const resultado = await actualizarEstadoProveedor(proveedorActual.id, nuevoEstado, camposConError);
+
+      if (!resultado.ok) {
+        alert('Ocurrió un error al actualizar. Intenta de nuevo.');
+        botones.forEach(b => b.disabled = false);
+        return;
+      }
+
+      alert(nuevoEstado === 'no-verificado'
+        ? 'Guardado. Se envió el correo al proveedor con el link para corregir.'
+        : 'Guardado. Se envió el correo al proveedor confirmando que quedó verificado.');
+
+      render();
+    }
+
+    document.addEventListener('DOMContentLoaded', render);
+  </script>
+</body>
+</html>
