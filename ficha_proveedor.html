@@ -34,7 +34,7 @@
       { key: 'razonSocial', label: 'Razón social' },
       { key: 'nombreComercial', label: 'Nombre comercial' },
       { key: 'ruc', label: 'RUC' },
-      { key: 'archivoRuc', label: 'RUC actualizado / SRI (PDF)' },
+      { key: 'archivoRuc', label: 'RUC actualizado / SRI (PDF)', esArchivo: true },
       { key: 'telefono1', label: 'Teléfono 1' },
       { key: 'telefono2', label: 'Teléfono 2' },
       { key: 'ciudad', label: 'Ciudad' },
@@ -42,8 +42,8 @@
       { key: 'correoRetenciones', label: 'Correo (retenciones)' },
       { key: 'direccion', label: 'Dirección' },
       { key: 'representanteLegal', label: 'Representante legal' },
-      { key: 'archivoRepLegal', label: 'Documento representante legal (PDF)' },
-      { key: 'archivoNombramiento', label: 'Nombramiento representante (PDF)' },
+      { key: 'archivoRepLegal', label: 'Documento representante legal (PDF)', esArchivo: true },
+      { key: 'archivoNombramiento', label: 'Nombramiento representante (PDF)', esArchivo: true },
       { key: 'contacto1', label: 'Contacto adicional 1' },
       { key: 'contacto2', label: 'Contacto adicional 2' },
       { key: 'formaPago', label: 'Forma de pago' },
@@ -51,7 +51,7 @@
       { key: 'tipoCuenta', label: 'Tipo de cuenta' },
       { key: 'numeroCuenta', label: 'Número de cuenta' },
       { key: 'titularCuenta', label: 'Titular de la cuenta' },
-      { key: 'certificadoBancario', label: 'Certificado bancario (PDF)' },
+      { key: 'certificadoBancario', label: 'Certificado bancario (PDF)', esArchivo: true },
       { key: 'area', label: 'Área de servicio' },
     ];
 
@@ -91,7 +91,14 @@
             <div class="flex items-center gap-3 px-4 py-3 ${i < CAMPOS.length - 1 ? 'border-b border-[var(--border)]' : ''}">
               <input type="checkbox" class="w-auto campo-error" data-key="${c.key}" ${p.camposConError.includes(c.key) ? 'checked' : ''}>
               <span class="text-sm text-[var(--text-muted)] w-48 flex-shrink-0">${c.label}</span>
-              <span class="text-sm flex-1">${p[c.key] || '<span class="text-[var(--text-danger)]">(vacío)</span>'}</span>
+              <span class="text-sm flex-1">
+                ${c.esArchivo
+                  ? (p[c.key]
+                      ? `<a href="${p[c.key]}" target="_blank" class="inline-flex items-center gap-1" style="color:var(--accent);"><i class="fa-solid fa-file-pdf"></i> Ver PDF</a>`
+                      : `<span class="text-[var(--text-danger)]">Sin archivo</span>`)
+                  : (p[c.key] || '<span class="text-[var(--text-danger)]">(vacío)</span>')
+                }
+              </span>
             </div>
           `).join('')}
         </div>
@@ -116,6 +123,11 @@
         return;
       }
 
+      if (nuevoEstado === 'no-verificado') {
+        const confirma = confirm('¿Está seguro que desea enviar el formulario para que el proveedor lo corrija?');
+        if (!confirma) return;
+      }
+
       const botones = document.querySelectorAll('.flex.gap-4 button');
       botones.forEach(b => b.disabled = true);
 
@@ -128,7 +140,7 @@
       }
 
       alert(nuevoEstado === 'no-verificado'
-        ? 'Guardado. Se envió el correo al proveedor con el link para corregir.'
+        ? 'Formulario reenviado al proveedor.'
         : 'Guardado. Se envió el correo al proveedor confirmando que quedó verificado.');
 
       render();
