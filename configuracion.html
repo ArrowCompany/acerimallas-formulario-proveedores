@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - Acerimallas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-10">
+  <div class="max-w-2xl mx-auto px-6">
+
+    <a href="panel_principal_secretaria.html" class="inline-flex items-center gap-2 mb-6 text-[var(--text-secondary)] hover:text-[var(--accent)]">
+      <i class="fa-solid fa-arrow-left"></i> Volver al panel
+    </a>
+
+    <h1 class="title-font text-2xl font-semibold mb-6">Configuración</h1>
+
+    <!-- Correos de alerta -->
+    <div class="card p-6 mb-6">
+      <p class="font-medium mb-1">Correos para alertas</p>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Aquí llegan los avisos de nuevos proveedores y mantenimientos próximos</p>
+
+      <div id="listaCorreos" class="mb-4"></div>
+
+      <form id="formCorreo" class="flex gap-2">
+        <input type="email" id="nuevoCorreo" placeholder="nuevo-correo@ejemplo.com" required>
+        <button type="submit" class="btn-primary flex items-center gap-2 whitespace-nowrap">
+          <i class="fa-solid fa-plus"></i> Agregar
+        </button>
+      </form>
+    </div>
+
+    <button onclick="enviarCorreoPrueba()" class="btn-secondary w-full flex items-center justify-center gap-2 mb-8">
+      <i class="fa-solid fa-envelope"></i> Enviar correo de prueba
+    </button>
+
+    <!-- Importar Excel -->
+    <div class="card p-6 mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="font-medium">Importar proveedores existentes</p>
+          <p class="text-sm text-[var(--text-secondary)]">Sube el Excel o CSV con los 500 registros</p>
+        </div>
+        <label class="btn-primary flex items-center gap-2 cursor-pointer whitespace-nowrap">
+          <i class="fa-solid fa-upload"></i> Subir archivo
+          <input type="file" id="inputExcel" accept=".xlsx,.xls,.csv" class="hidden" onchange="procesarImportacion(this)">
+        </label>
+      </div>
+    </div>
+
+    <div id="resultadoImportacion" class="card p-6 hidden-el"></div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script>
+    function renderCorreos() {
+      const correos = getCorreosAlerta();
+      const container = document.getElementById('listaCorreos');
+      if (correos.length === 0) {
+        container.innerHTML = `<p class="text-sm text-[var(--text-muted)] py-2">Aún no has agregado ningún correo.</p>`;
+        return;
+      }
+      container.innerHTML = correos.map((c, i) => `
+        <div class="flex justify-between items-center py-2 ${i < correos.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+          <span class="text-sm">${c}</span>
+          <button onclick="eliminarCorreo('${c}')" class="w-8 h-8 flex items-center justify-center hover:text-red-500" aria-label="Eliminar">
+            <i class="fa-solid fa-trash text-sm"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('formCorreo').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('nuevoCorreo');
+      const correos = getCorreosAlerta();
+      if (!correos.includes(input.value)) {
+        correos.push(input.value);
+        saveCorreosAlerta(correos);
+        renderCorreos();
+      }
+      input.value = '';
+    });
+
+    function eliminarCorreo(correo) {
+      const correos = getCorreosAlerta().filter(c => c !== correo);
+      saveCorreosAlerta(correos);
+      renderCorreos();
+    }
+
+    async function enviarCorreoPrueba() {
+      const correos = getCorreosAlerta();
+      if (correos.length === 0) {
+        alert('Agrega al menos un correo antes de enviar la prueba.');
+        return;
+      }
+      const resultado = await enviarCorreoPruebaBackend(correos);
+      if (resultado.ok) {
+        alert(`Correo de prueba enviado a:\n${correos.join('\n')}`);
+      } else {
+        alert('Ocurrió un error enviando el correo de prueba.');
+      }
+    }
+
+    // Simulación de importación (el backend real usará Apps Script + SpreadsheetApp)
+    function procesarImportacion(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Simulación de resultado — reemplazar por respuesta real del backend
+      const total = 500, importados = 462, conDatosFaltantes = 38;
+      const faltantes = [
+        { nombre: 'Distribuidora Sur S.A.', falta: 'certificado bancario' },
+        { nombre: 'Ferretería Colón', falta: 'RUC' },
+        { nombre: 'Insumos del Pacífico', falta: 'teléfono' }
+      ];
+
+      const cont = document.getElementById('resultadoImportacion');
+      cont.classList.remove('hidden-el');
+      cont.innerHTML = `
+        <p class="text-sm text-[var(--text-secondary)] mb-3">Resultado de la última importación · ${total} filas procesadas (${file.name})</p>
+        <div class="flex justify-between items-center py-2 border-b border-[var(--border)]">
+          <span class="text-sm">Importados correctamente</span>
+          <span class="status-verificado">${importados}</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-sm">Con datos faltantes</span>
+          <span class="status-pendiente">${conDatosFaltantes}</span>
+        </div>
+        <div class="border-t border-[var(--border)] mt-3 pt-3">
+          ${faltantes.map(f => `
+            <div class="flex justify-between items-center py-2">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-sm" style="color:var(--warning)"></i>
+                <span class="text-sm">${f.nombre}</span>
+              </div>
+              <span class="text-xs text-[var(--text-muted)]">falta ${f.falta}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => setTimeout(renderCorreos, 0));
+  </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equipos y Mantenimientos - Acerimallas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-10">
+  <div class="max-w-6xl mx-auto px-6">
+
+    <a href="panel_principal_secretaria.html" class="inline-flex items-center gap-2 mb-6 text-[var(--text-secondary)] hover:text-[var(--accent)]">
+      <i class="fa-solid fa-arrow-left"></i> Volver al panel
+    </a>
+
+    <div class="flex justify-between items-center mb-6">
+      <h1 id="tituloProveedor" class="title-font text-2xl font-semibold">Equipos</h1>
+      <button onclick="abrirModalEquipo()" class="btn-primary flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Agregar nuevo equipo
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-6">
+      <div class="card p-4">
+        <p class="text-sm text-[var(--text-secondary)] mb-3 px-2">Lista de equipos</p>
+        <div id="listaEquipos"></div>
+      </div>
+
+      <div class="card p-6" id="detalleEquipo"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar equipo -->
+  <div id="modalEquipo" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6">
+    <div class="card p-8 max-w-md w-full">
+      <h2 class="title-font text-xl mb-4">Agregar nuevo equipo</h2>
+      <form id="formEquipo" class="space-y-4">
+        <input type="text" name="nombre" placeholder="Nombre del equipo *" required>
+        <input type="text" name="ubicacion" placeholder="Ubicación *" required>
+        <input type="text" name="serie" placeholder="Número de serie">
+        <input type="date" name="proximoMantenimiento">
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="cerrarModalEquipo()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar equipo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Agregar mantenimiento -->
+  <div id="modalMantenimiento" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6 overflow-y-auto">
+    <div class="card p-8 max-w-lg w-full my-8">
+      <h2 class="title-font text-xl mb-4">Agregar mantenimiento</h2>
+      <form id="formMantenimiento" class="space-y-4">
+        <input type="date" name="fecha" required>
+        <input type="text" name="tipo" placeholder="Tipo de servicio *" required>
+        <textarea name="observacion" placeholder="Observación (lo que tenía el equipo)" rows="2"></textarea>
+        <textarea name="detalle" placeholder="Detalle de lo que se resolvió" rows="2" required></textarea>
+        <div>
+          <label class="block text-sm text-[var(--text-secondary)] mb-2">Fotos</label>
+          <input type="file" name="fotos" accept="image/*" multiple>
+        </div>
+        <div>
+          <label class="block text-sm text-[var(--text-secondary)] mb-2">Firma</label>
+          <input type="file" name="firma" accept="image/*">
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="cerrarModalMantenimiento()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar servicio</button>
+        </div>
+        <p class="text-xs text-[var(--text-muted)] text-center">Al guardar se genera automáticamente un PDF con estos datos, fotos y firma.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Subir mantenimiento PDF externo -->
+  <div id="modalSubirPdf" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6">
+    <div class="card p-8 max-w-md w-full">
+      <h2 class="title-font text-xl mb-4">Subir mantenimiento PDF</h2>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Para cuando el técnico externo (ej. servicio tercerizado) ya entrega su propio reporte en PDF.</p>
+      <form id="formSubirPdf" class="space-y-4">
+        <input type="date" name="fecha" required>
+        <input type="text" name="tipo" placeholder="Tipo de servicio *" required>
+        <input type="file" name="pdf" accept="application/pdf" required>
+        <p class="error-text show" id="errorPdfExterno" style="display:none;">Solo se aceptan archivos PDF.</p>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="cerrarModalSubirPdf()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Subir PDF</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const proveedorId = params.get('proveedorId');
+    let equipoSeleccionadoId = null;
+    let equiposCache = [];
+    let mantenimientosCache = [];
+
+    async function renderListaEquipos() {
+      const proveedores = await getProveedores();
+      const proveedor = proveedores.find(p => String(p.id) === String(proveedorId));
+      document.getElementById('tituloProveedor').textContent = `Equipos · ${proveedor ? proveedor.razonSocial : ''}`;
+
+      equiposCache = await getEquipos(proveedorId);
+      const container = document.getElementById('listaEquipos');
+
+      if (equiposCache.length === 0) {
+        container.innerHTML = `<p class="text-sm text-[var(--text-muted)] px-2">Sin equipos registrados aún.</p>`;
+        document.getElementById('detalleEquipo').innerHTML = `<p class="text-sm text-[var(--text-muted)]">Agrega un equipo para empezar.</p>`;
+        return;
+      }
+
+      if (!equipoSeleccionadoId) equipoSeleccionadoId = equiposCache[0].id;
+
+      container.innerHTML = equiposCache.map(e => `
+        <div onclick="seleccionarEquipo('${e.id}')" class="p-3 rounded-xl mb-1 cursor-pointer"
+             style="${String(e.id) === String(equipoSeleccionadoId) ? 'background:var(--accent);color:white;' : ''}">
+          <p class="text-sm font-medium">${e.nombre}</p>
+          <p class="text-xs ${String(e.id) === String(equipoSeleccionadoId) ? 'opacity-80' : 'text-[var(--text-muted)]'}">${e.ubicacion}</p>
+        </div>
+      `).join('');
+
+      renderDetalleEquipo();
+    }
+
+    function seleccionarEquipo(id) {
+      equipoSeleccionadoId = id;
+      renderListaEquipos();
+    }
+
+    async function renderDetalleEquipo() {
+      const equipo = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+      const detalle = document.getElementById('detalleEquipo');
+
+      if (!equipo) {
+        detalle.innerHTML = `<p class="text-sm text-[var(--text-muted)]">Selecciona un equipo.</p>`;
+        return;
+      }
+
+      detalle.innerHTML = `<p class="text-sm text-[var(--text-muted)]">Cargando historial...</p>`;
+      mantenimientosCache = (await getMantenimientos(equipo.id))
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      detalle.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="title-font text-lg font-medium">${equipo.nombre}</h2>
+            <p class="text-sm text-[var(--text-secondary)]">${equipo.ubicacion} · Serie ${equipo.serie || 'N/A'} · Próx: ${equipo.proximoMantenimiento || 'sin definir'}</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="abrirModalMantenimiento()" class="btn-secondary text-sm py-2 px-4">+ Agregar mantenimiento</button>
+            <button onclick="abrirModalSubirPdf()" class="btn-secondary text-sm py-2 px-4">Subir mantenimiento PDF</button>
+          </div>
+        </div>
+
+        <div class="border-t border-[var(--border)] pt-4">
+          <p class="text-sm text-[var(--text-secondary)] mb-3">Historial de mantenimientos</p>
+          ${mantenimientosCache.length === 0 ? `<p class="text-sm text-[var(--text-muted)]">Sin mantenimientos registrados.</p>` : mantenimientosCache.map((m, i) => `
+            <div class="flex justify-between items-center py-2 ${i < mantenimientosCache.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+              <div>
+                <p class="text-sm">${m.fecha}</p>
+                <p class="text-xs text-[var(--text-muted)]">${m.tipo}${m.origen === 'externo' ? ' · PDF externo' : ''}</p>
+              </div>
+              <a href="${m.pdfUrl}" target="_blank"><i class="fa-solid fa-file-pdf" style="color:var(--accent)" title="Ver PDF"></i></a>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // ---- Modal equipo ----
+    function abrirModalEquipo() { document.getElementById('modalEquipo').classList.remove('hidden-el'); document.getElementById('modalEquipo').classList.add('flex'); }
+    function cerrarModalEquipo() { document.getElementById('modalEquipo').classList.add('hidden-el'); document.getElementById('modalEquipo').classList.remove('flex'); document.getElementById('formEquipo').reset(); }
+
+    document.getElementById('formEquipo').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const fd = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      const resultado = await agregarEquipo({
+        proveedorId,
+        nombre: fd.get('nombre'), ubicacion: fd.get('ubicacion'),
+        serie: fd.get('serie'), proximoMantenimiento: fd.get('proximoMantenimiento')
+      });
+
+      submitBtn.disabled = false;
+      if (!resultado.ok) { alert('Error al guardar el equipo.'); return; }
+
+      equipoSeleccionadoId = resultado.id;
+      cerrarModalEquipo();
+      renderListaEquipos();
+    });
+
+    // ---- Modal mantenimiento manual ----
+    function abrirModalMantenimiento() { document.getElementById('modalMantenimiento').classList.remove('hidden-el'); document.getElementById('modalMantenimiento').classList.add('flex'); }
+    function cerrarModalMantenimiento() { document.getElementById('modalMantenimiento').classList.add('hidden-el'); document.getElementById('modalMantenimiento').classList.remove('flex'); document.getElementById('formMantenimiento').reset(); }
+
+    document.getElementById('formMantenimiento').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const fd = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando y generando PDF...';
+
+      const fotos = fd.getAll('fotos').filter(f => f && f.size > 0);
+      const fotosBase64 = [];
+      for (const foto of fotos) {
+        const encoded = await archivoABase64(foto);
+        if (encoded) fotosBase64.push(encoded.base64);
+      }
+      const firmaFile = fd.get('firma');
+      const firmaEncoded = firmaFile && firmaFile.size > 0 ? await archivoABase64(firmaFile) : null;
+
+      const resultado = await agregarMantenimiento({
+        equipoId: equipoSeleccionadoId,
+        fecha: fd.get('fecha'), tipo: fd.get('tipo'),
+        observacion: fd.get('observacion'), detalle: fd.get('detalle'),
+        fotosBase64, firmaBase64: firmaEncoded ? firmaEncoded.base64 : null,
+        origen: 'manual'
+      });
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Guardar servicio';
+
+      if (!resultado.ok) { alert('Error al guardar el mantenimiento.'); return; }
+
+      cerrarModalMantenimiento();
+      renderDetalleEquipo();
+      alert('Servicio guardado. El PDF se generó con los datos, fotos y firma ingresados.');
+    });
+
+    // ---- Modal subir PDF externo ----
+    function abrirModalSubirPdf() { document.getElementById('modalSubirPdf').classList.remove('hidden-el'); document.getElementById('modalSubirPdf').classList.add('flex'); }
+    function cerrarModalSubirPdf() { document.getElementById('modalSubirPdf').classList.add('hidden-el'); document.getElementById('modalSubirPdf').classList.remove('flex'); document.getElementById('formSubirPdf').reset(); document.getElementById('errorPdfExterno').style.display='none'; }
+
+    document.getElementById('formSubirPdf').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const fd = new FormData(this);
+      const file = fd.get('pdf');
+      const isPdf = file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+      if (!isPdf) {
+        document.getElementById('errorPdfExterno').style.display = 'block';
+        return;
+      }
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      const encoded = await archivoABase64(file);
+      const resultado = await agregarMantenimiento({
+        equipoId: equipoSeleccionadoId,
+        fecha: fd.get('fecha'), tipo: fd.get('tipo'),
+        pdfBase64: encoded.base64, pdfNombre: encoded.nombre,
+        origen: 'externo'
+      });
+
+      submitBtn.disabled = false;
+      if (!resultado.ok) { alert('Error al subir el PDF.'); return; }
+
+      cerrarModalSubirPdf();
+      renderDetalleEquipo();
+    });
+
+    document.addEventListener('DOMContentLoaded', renderListaEquipos);
+  </script>
+</body>
+</html>

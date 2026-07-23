@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Proveedor - Acerimallas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-12">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="card p-10">
+      <div class="text-center mb-10">
+        <h1 class="title-font text-4xl font-semibold" style="color:var(--accent)">Acerimallas S.A.</h1>
+        <p class="text-xl mt-2 text-[var(--text-secondary)]">Registro de Proveedores 2026</p>
+        <p class="text-sm mt-4 text-[var(--text-muted)] max-w-2xl mx-auto">
+          En cumplimiento con la Ley Orgánica de Protección de Datos Personales, el titular brinda su consentimiento
+          expreso para el tratamiento de sus datos personales, exclusivo para fines de la relación contractual como
+          proveedor de Acerimallas S.A.
+        </p>
+      </div>
+
+      <form id="providerForm" class="space-y-10" novalidate>
+
+        <!-- 1. Correo -->
+        <section>
+          <label class="block font-medium mb-2">1. Correo electrónico *</label>
+          <input type="email" name="correo" required>
+        </section>
+
+        <!-- 2. Tipo de proveedor -->
+        <section>
+          <label class="block font-medium mb-3">2. Datos del proveedor *</label>
+          <div class="flex flex-wrap gap-6">
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Juridica" class="w-auto" required onchange="toggleOtros()"> Persona Jurídica</label>
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Natural" class="w-auto" onchange="toggleOtros()"> Persona Natural</label>
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Otros" class="w-auto" onchange="toggleOtros()"> Otros</label>
+          </div>
+        </section>
+
+        <!-- 3. Especifique otros (condicional) -->
+        <section id="otrosField" class="hidden-el">
+          <label class="block font-medium mb-2">3. Si su respuesta anterior fue "Otros", especifique</label>
+          <input type="text" name="otrosEspecificar">
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 4. Razón social -->
+          <section>
+            <label class="block font-medium mb-2">4. Razón social *</label>
+            <input type="text" name="razonSocial" required>
+          </section>
+
+          <!-- 5. Nombre comercial -->
+          <section>
+            <label class="block font-medium mb-2">5. Nombre comercial</label>
+            <input type="text" name="nombreComercial">
+          </section>
+
+          <!-- 6. RUC -->
+          <section>
+            <label class="block font-medium mb-2">6. Número de RUC</label>
+            <input type="text" name="ruc">
+          </section>
+
+          <!-- 7. Adjuntar RUC -->
+          <section>
+            <label class="block font-medium mb-2">7. Adjuntar RUC actualizado / SRI *</label>
+            <input type="file" name="archivoRuc" accept="application/pdf" required onchange="validatePdf(this)">
+            <p class="error-text" data-error-for="archivoRuc">Solo se aceptan archivos PDF.</p>
+          </section>
+
+          <!-- 8. Teléfono 1 -->
+          <section>
+            <label class="block font-medium mb-2">8. Teléfono 1 *</label>
+            <input type="tel" name="telefono1" required>
+          </section>
+
+          <!-- 9. Teléfono 2 -->
+          <section>
+            <label class="block font-medium mb-2">9. Teléfono 2</label>
+            <input type="tel" name="telefono2">
+          </section>
+
+          <!-- 10. Ciudad -->
+          <section>
+            <label class="block font-medium mb-2">10. Ciudad *</label>
+            <input type="text" name="ciudad" required>
+          </section>
+
+          <!-- 11. Provincia -->
+          <section>
+            <label class="block font-medium mb-2">11. Provincia *</label>
+            <input type="text" name="provincia" required>
+          </section>
+
+          <!-- 12. Correo retenciones -->
+          <section>
+            <label class="block font-medium mb-2">12. Correo electrónico (recepción de retenciones) *</label>
+            <input type="email" name="correoRetenciones" required>
+          </section>
+
+          <!-- 13. Dirección -->
+          <section>
+            <label class="block font-medium mb-2">13. Dirección *</label>
+            <input type="text" name="direccion" required>
+          </section>
+        </div>
+
+        <!-- 14. Representante legal -->
+        <section>
+          <label class="block font-medium mb-2">14. Datos del representante legal (Nombre / Cédula / Email)</label>
+          <input type="text" name="representanteLegal" placeholder="Nombre completo, cédula, correo">
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 15. Documento representante -->
+          <section>
+            <label class="block font-medium mb-2">15. Adjuntar documento del representante legal (cédula y certificado de votación)</label>
+            <input type="file" name="archivoRepLegal" accept="application/pdf" onchange="validatePdf(this)">
+            <p class="error-text" data-error-for="archivoRepLegal">Solo se aceptan archivos PDF.</p>
+          </section>
+
+          <!-- 16. Nombramiento representante -->
+          <section>
+            <label class="block font-medium mb-2">16. Adjuntar nombramiento del representante legal (Persona Jurídica)</label>
+            <input type="file" name="archivoNombramiento" accept="application/pdf" onchange="validatePdf(this)">
+            <p class="error-text" data-error-for="archivoNombramiento">Solo se aceptan archivos PDF.</p>
+          </section>
+        </div>
+
+        <!-- 17-18. Contactos adicionales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <section>
+            <label class="block font-medium mb-2">17. Contacto adicional 1 (nombre, teléfono, email) *</label>
+            <input type="text" name="contacto1" required>
+          </section>
+          <section>
+            <label class="block font-medium mb-2">18. Contacto adicional 2 (nombre, teléfono, email)</label>
+            <input type="text" name="contacto2">
+          </section>
+        </div>
+
+        <!-- 19. Forma de pago -->
+        <section>
+          <label class="block font-medium mb-3">19. Forma de pago</label>
+          <div class="flex flex-wrap gap-6">
+            <label class="flex items-center gap-2"><input type="radio" name="formaPago" value="Contado" class="w-auto"> Contado (Transferencia bancaria)</label>
+            <label class="flex items-center gap-2"><input type="radio" name="formaPago" value="Credito" class="w-auto"> Crédito</label>
+          </div>
+        </section>
+
+        <!-- 20. Datos bancarios -->
+        <section>
+          <label class="block font-medium mb-3">20. Datos bancarios</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="text" name="entidadBancaria" placeholder="Entidad bancaria *" required>
+            <select name="tipoCuenta" required>
+              <option value="">Tipo de cuenta *</option>
+              <option value="Ahorro">Ahorro</option>
+              <option value="Corriente">Corriente</option>
+            </select>
+            <input type="text" name="numeroCuenta" placeholder="Número de cuenta *" required>
+            <input type="text" name="titularCuenta" placeholder="Nombre del titular *" required>
+          </div>
+        </section>
+
+        <!-- 21. Certificado bancario -->
+        <section>
+          <label class="block font-medium mb-2">21. Adjuntar certificado bancario *</label>
+          <input type="file" name="archivoCertBancario" accept="application/pdf" required onchange="validatePdf(this)">
+          <p class="error-text" data-error-for="archivoCertBancario">Solo se aceptan archivos PDF.</p>
+        </section>
+
+        <!-- 22. Área de servicio -->
+        <section>
+          <label class="block font-medium mb-3">22. Área a la que pertenece el servicio o artículos que ofrece</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros y herramientas industriales" class="w-auto"> Suministros y herramientas industriales</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros electrónicos" class="w-auto"> Suministros electrónicos</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros de limpieza" class="w-auto"> Suministros de limpieza</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros de oficina" class="w-auto"> Suministros de oficina</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Mantenimiento mecánico o maquinaria industrial" class="w-auto"> Mantenimiento mecánico o maquinaria industrial</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Mantenimiento de muebles y enseres" class="w-auto"> Mantenimiento de muebles y enseres</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Equipos de oficina" class="w-auto"> Equipos de oficina</label>
+            <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Servicios varios" class="w-auto"> Servicios varios</label>
+          </div>
+        </section>
+
+        <!-- 23. Política de privacidad -->
+        <section class="text-sm text-[var(--text-secondary)]">
+          <p>Política de privacidad: <a href="https://www.acerimallas.com.ec/politica" target="_blank" style="color:var(--accent)" class="underline">www.acerimallas.com.ec/politica</a></p>
+        </section>
+
+        <!-- 24. Autorización -->
+        <section>
+          <label class="flex items-start gap-3">
+            <input type="checkbox" name="autorizaTratamiento" class="w-auto mt-1" required>
+            <span class="text-sm">24. Autorizo a Acerimallas S.A. a tratar mis datos para: validación comercial y contractual, gestión de pagos y obligaciones financieras, cumplimiento tributario y contable, verificación en fuentes públicas o buros autorizados. *</span>
+          </label>
+        </section>
+
+        <!-- 25. Aceptación política -->
+        <section>
+          <label class="flex items-start gap-3">
+            <input type="checkbox" name="aceptaPolitica" class="w-auto mt-1" required>
+            <span class="text-sm">25. He leído y acepto la Política de privacidad. *</span>
+          </label>
+        </section>
+
+        <button type="submit" class="btn-primary w-full py-6 rounded-2xl text-lg font-medium flex items-center justify-center gap-3">
+          <i class="fa-solid fa-paper-plane"></i>
+          Enviar Registro para Revisión
+        </button>
+      </form>
+
+      <div id="successMessage" class="hidden-el text-center py-10">
+        <i class="fa-solid fa-circle-check text-5xl" style="color:var(--accent)"></i>
+        <p class="title-font text-2xl mt-4">Se va a revisar su solicitud</p>
+        <p class="text-[var(--text-secondary)] mt-2">Le notificaremos por correo el resultado de la verificación.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script>
+    function toggleOtros() {
+      const value = document.querySelector('input[name="tipoProveedor"]:checked')?.value;
+      document.getElementById('otrosField').classList.toggle('hidden-el', value !== 'Otros');
+    }
+
+    // Validación: solo PDF permitido en adjuntos
+    function validatePdf(input) {
+      const errorEl = document.querySelector(`[data-error-for="${input.name}"]`);
+      const file = input.files[0];
+      if (!file) { errorEl?.classList.remove('show'); return; }
+
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        input.classList.add('input-error');
+        errorEl?.classList.add('show');
+        input.value = ''; // limpia el archivo no permitido
+      } else {
+        input.classList.remove('input-error');
+        errorEl?.classList.remove('show');
+      }
+    }
+
+    document.getElementById('providerForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      // Revalida que ningún adjunto quedó marcado con error
+      const invalidFile = this.querySelector('input[type="file"].input-error');
+      if (invalidFile) {
+        alert('Hay un archivo con formato no permitido. Solo se aceptan PDF.');
+        return;
+      }
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+
+      const fd = new FormData(this);
+
+      // Convierte los 4 adjuntos PDF a base64 para mandarlos al backend
+      const archivoRuc = await archivoABase64(fd.get('archivoRuc'));
+      const archivoRepLegal = await archivoABase64(fd.get('archivoRepLegal'));
+      const archivoNombramiento = await archivoABase64(fd.get('archivoNombramiento'));
+      const archivoCertBancario = await archivoABase64(fd.get('archivoCertBancario'));
+
+      const datos = {
+        correo: fd.get('correo'),
+        tipoProveedor: fd.get('tipoProveedor'),
+        otrosEspecificar: fd.get('otrosEspecificar'),
+        razonSocial: fd.get('razonSocial'),
+        nombreComercial: fd.get('nombreComercial'),
+        ruc: fd.get('ruc'),
+        archivoRuc,
+        telefono1: fd.get('telefono1'),
+        telefono2: fd.get('telefono2'),
+        ciudad: fd.get('ciudad'),
+        provincia: fd.get('provincia'),
+        correoRetenciones: fd.get('correoRetenciones'),
+        direccion: fd.get('direccion'),
+        representanteLegal: fd.get('representanteLegal'),
+        archivoRepLegal,
+        archivoNombramiento,
+        contacto1: fd.get('contacto1'),
+        contacto2: fd.get('contacto2'),
+        formaPago: fd.get('formaPago'),
+        entidadBancaria: fd.get('entidadBancaria'),
+        tipoCuenta: fd.get('tipoCuenta'),
+        numeroCuenta: fd.get('numeroCuenta'),
+        titularCuenta: fd.get('titularCuenta'),
+        archivoCertBancario,
+        area: fd.getAll('area')
+      };
+
+      const resultado = await guardarProveedor(datos);
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar Registro para Revisión';
+
+      if (!resultado.ok) {
+        alert('Ocurrió un error al enviar el registro. Intenta de nuevo.');
+        return;
+      }
+
+      this.classList.add('hidden-el');
+      document.getElementById('successMessage').classList.remove('hidden-el');
+    });
+  </script>
+</body>
+</html>
