@@ -1,0 +1,41 @@
+:root {
+  --surface-1: #F8F7F4;
+  --surface-2: #FFFFFF;
+  --border: #E5E3DD;
+  --text-primary: #1F1E1B;
+  --text-secondary: #6B6459;
+  --accent: #2B5F52;
+}
+
+.dark {
+  --surface-1: #1A1C1E;
+  --surface-2: #25272B;
+  --border: #3A3D42;
+  --text-primary: #F0EDE6;
+  --text-secondary: #A8A39A;
+  --accent: #5FA88F;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.title-font {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
