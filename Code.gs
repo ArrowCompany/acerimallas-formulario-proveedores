@@ -21,10 +21,17 @@
 
 const SHEET_ID = '1WeNgnCUaE2Pp2H5LDNUOmMQ3lkx1YXlCmhg1eoJGpLE';
 const DRIVE_FOLDER_ID = '1Wfx7XyVZ3TjUSKiL7kLYNEi9LhHdxJ7o';
+const API_KEY = 'acerimallas-2026-x7k9m2'; // cámbiala por cualquier texto largo que tú elijas
 const CORREOS_EMPRESA_DEFAULT = ['arrowrelax@gmail.com']; // se puede sobreescribir desde la hoja de config
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
+
+  if (body.apiKey !== API_KEY) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'No autorizado' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const accion = body.accion;
 
   let resultado;
@@ -53,6 +60,11 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  if (e.parameter.apiKey !== API_KEY) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'No autorizado' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const accion = e.parameter.accion;
   let resultado;
 
