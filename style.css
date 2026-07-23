@@ -19,9 +19,9 @@
 
 .dark {
   /* Modo Oscuro */
-  --surface-1: #1A1C1E;
-  --surface-2: #25272B;
-  --border: #3A3D42;
+  --surface-1: #14161A;
+  --surface-2: #262A30;
+  --border: #3E434B;
   --text-primary: #F0EDE6;
   --text-secondary: #A8A39A;
   --text-muted: #6B6459;
@@ -50,6 +50,7 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 24px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
   transition: all 0.3s ease;
 }
 
