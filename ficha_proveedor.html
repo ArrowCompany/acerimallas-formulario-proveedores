@@ -6,6 +6,12 @@
   <title>Ficha de Proveedor - Acerimallas</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
+  <script>
+    // Aplica el mismo tema (claro/oscuro) elegido en el panel principal
+    if (localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null) {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">

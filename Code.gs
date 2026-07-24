@@ -49,6 +49,9 @@ function doPost(e) {
     case 'agregarMantenimiento':
       resultado = agregarMantenimiento(body.datos);
       break;
+    case 'actualizarProximoMantenimiento':
+      resultado = actualizarProximoMantenimiento(body.equipoId, body.nuevaFecha);
+      break;
     case 'enviarCorreoPrueba':
       resultado = enviarCorreoPrueba(body.correos);
       break;
@@ -256,6 +259,27 @@ function agregarEquipo(datos) {
   return { ok: true, id };
 }
 
+// Actualiza solo la columna "proximoMantenimiento" (col. 6) de un equipo.
+// Se usa para reprogramar automáticamente después de registrar una visita.
+function actualizarProximoMantenimiento(equipoId, nuevaFecha) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === equipoId);
+  if (rowIndex === -1) return { ok: false, error: 'Equipo no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 6).setValue(nuevaFecha);
+
+  // Como cambia la fecha, se limpian las marcas de "ya avisado" guardadas en
+  // datosEspecificos para que el nuevo ciclo pueda volver a generar sus alertas
+  let datosEspecificos = {};
+  try { datosEspecificos = data[rowIndex][7] ? JSON.parse(data[rowIndex][7]) : {}; } catch (e) {}
+  delete datosEspecificos._alertaSemanaPara;
+  delete datosEspecificos._alertaHoyPara;
+  sheet.getRange(rowIndex + 1, 8).setValue(JSON.stringify(datosEspecificos));
+
+  return { ok: true };
+}
+
 function listarEquipos(proveedorId) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
   const data = sheet.getDataRange().getValues();
@@ -341,6 +365,79 @@ function generarPdfMantenimiento(datos) {
   const pdfFile = folder.createFile(pdfBlob);
   docFile.setTrashed(true); // borra el Doc intermedio, solo deja el PDF
   return pdfFile.getUrl();
+}
+
+// ---------------------------------------------------------------------
+// ALERTAS AUTOMÁTICAS DE MANTENIMIENTO
+// Revisa todos los equipos y, si a un mantenimiento le falta exactamente
+// 7 días o es HOY, registra la alerta en el sistema (Log_Alertas) y manda
+// el correo a los destinatarios configurados. Para que esto corra solo,
+// hay que instalar un disparador diario UNA SOLA VEZ (ver crearTriggerDiario).
+// ---------------------------------------------------------------------
+function revisarAlertasMantenimiento() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const correos = obtenerCorreosAlerta();
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const proximoStr = row[5];
+    if (!proximoStr) continue;
+
+    const proximo = new Date(proximoStr);
+    proximo.setHours(0, 0, 0, 0);
+    const diffDias = Math.round((proximo - hoy) / (1000 * 60 * 60 * 24));
+
+    let datosEspecificos = {};
+    try { datosEspecificos = row[7] ? JSON.parse(row[7]) : {}; } catch (e) {}
+
+    // "clave" para no mandar la misma alerta dos veces mientras la fecha no cambie
+    const clave = String(proximoStr);
+    let cambio = false;
+
+    if (diffDias === 7 && datosEspecificos._alertaSemanaPara !== clave) {
+      enviarAlertaMantenimiento(row, correos, 'en 1 semana (' + proximoStr + ')');
+      datosEspecificos._alertaSemanaPara = clave;
+      cambio = true;
+    } else if (diffDias === 0 && datosEspecificos._alertaHoyPara !== clave) {
+      enviarAlertaMantenimiento(row, correos, 'HOY');
+      datosEspecificos._alertaHoyPara = clave;
+      cambio = true;
+    }
+
+    if (cambio) sheet.getRange(i + 1, 8).setValue(JSON.stringify(datosEspecificos));
+  }
+}
+
+function enviarAlertaMantenimiento(row, correos, cuando) {
+  const nombre = row[2], ubicacion = row[3];
+  const mensaje = `Mantenimiento de "${nombre}" (${ubicacion}) programado ${cuando}.`;
+
+  if (correos.length > 0) {
+    MailApp.sendEmail({
+      to: correos.join(','),
+      subject: `Recordatorio de mantenimiento - ${nombre}`,
+      body: mensaje
+    });
+  }
+  registrarAlerta(mensaje, 'warning');
+}
+
+// Ejecutar ESTA función UNA SOLA VEZ manualmente desde el editor de Apps Script
+// (elígela en el desplegable de funciones y dale "Ejecutar") para instalar el
+// disparador que corre revisarAlertasMantenimiento todos los días a las 8am.
+function crearTriggerDiario() {
+  // Evita crear el disparador dos veces si ya existe
+  const yaExiste = ScriptApp.getProjectTriggers()
+    .some(t => t.getHandlerFunction() === 'revisarAlertasMantenimiento');
+  if (yaExiste) return;
+
+  ScriptApp.newTrigger('revisarAlertasMantenimiento')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
 }
 
 // ---------------------------------------------------------------------

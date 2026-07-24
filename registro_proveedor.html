@@ -8,6 +8,12 @@
   <script>
     tailwind.config = { darkMode: 'class' };
   </script>
+  <script>
+    // Aplica el mismo tema (claro/oscuro) elegido en el panel principal
+    if (localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null) {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -328,6 +334,11 @@
         const elementos = document.getElementsByName(nombre);
         if (elementos.length === 0) return;
         const primero = elementos[0];
+
+        // En modo corrección, los campos que ya están correctos quedan bloqueados
+        // (disabled) y no se le vuelven a exigir al proveedor.
+        if (modoCorreccion && primero.disabled) return;
+
         let vacio;
 
         if (primero.type === 'radio' || (primero.type === 'checkbox' && elementos.length > 1)) {
@@ -403,6 +414,8 @@
         const yaExiste = proveedor[claveOriginal] || proveedor[nombre];
         if (yaExiste && !tieneError) {
           input.removeAttribute('required');
+          input.disabled = true;
+          input.style.opacity = '0.6';
           const nota = document.createElement('p');
           nota.className = 'text-xs mt-1';
           nota.style.color = 'var(--accent)';
@@ -420,6 +433,25 @@
           seccion.style.borderRadius = '10px';
           seccion.style.padding = '10px';
         }
+      });
+
+      // Bloquea (inhabilita) todos los campos que YA están correctos, para que el
+      // proveedor solo pueda tocar los que vienen marcados en rojo. Los archivos
+      // ya se manejan aparte arriba (requerido solo si vienen con error).
+      const nombresConError = new Set(proveedor.camposConError.map(c => ALIAS_CAMPOS[c] || c));
+      const nombresDelFormulario = new Set([...Object.values(NUMEROS_A_NOMBRES).flat(), 'tipoProveedor']);
+
+      nombresDelFormulario.forEach(nombre => {
+        const elementos = document.getElementsByName(nombre);
+        if (elementos.length === 0) return;
+        if (nombresConError.has(nombre)) return; // este sí lo puede editar
+
+        Array.from(elementos).forEach(el => {
+          if (el.type === 'file') return; // los archivos ya se bloquearon aparte arriba
+          el.disabled = true;
+          el.style.opacity = '0.6';
+          el.style.cursor = 'not-allowed';
+        });
       });
 
       // Cambia los textos para indicar que es una corrección

@@ -6,6 +6,12 @@
   <title>Equipos y Mantenimientos - Acerimallas</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' };</script>
+  <script>
+    // Aplica el mismo tema (claro/oscuro) elegido en el panel principal
+    if (localStorage.getItem('theme') === 'dark' || localStorage.getItem('theme') === null) {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -77,50 +83,50 @@
   </div>
 
   <!-- MODAL: Agregar mantenimiento -->
-  <div id="modalMantenimiento" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6 overflow-y-auto">
-    <div class="card p-8 max-w-lg w-full my-8">
-      <h2 class="title-font text-xl mb-4">Nueva visita</h2>
-      <form id="formMantenimiento" class="space-y-4">
+  <div id="modalMantenimiento" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-4">
+    <div class="card p-5 max-w-md w-full" style="max-height:92vh; overflow-y:auto;">
+      <h2 class="title-font text-lg mb-3">Nueva visita</h2>
+      <form id="formMantenimiento" class="space-y-3">
 
         <p class="text-xs text-[var(--text-secondary)] font-medium">Información</p>
-        <input type="date" name="fecha" required>
-        <input type="text" name="tipo" placeholder="Tipo de servicio *" required>
+        <input type="date" name="fecha" required style="padding:10px 14px;">
+        <input type="text" name="tipo" placeholder="Tipo de servicio *" required style="padding:10px 14px;">
 
-        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Detalle del equipo</p>
-        <textarea name="observacion" placeholder="¿Qué tenía? Estado del equipo..." rows="2"></textarea>
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Detalle del equipo</p>
+        <textarea name="observacion" placeholder="¿Qué tenía? Estado del equipo..." rows="2" style="padding:10px 14px;"></textarea>
 
-        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Observación</p>
-        <textarea name="detalle" placeholder="¿Qué se resolvió? Trabajo realizado..." rows="2" required></textarea>
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Observación</p>
+        <textarea name="detalle" placeholder="¿Qué se resolvió? Trabajo realizado..." rows="2" required style="padding:10px 14px;"></textarea>
 
         <div>
-          <p class="text-xs text-[var(--text-secondary)] font-medium mb-2">Fotos</p>
-          <label style="display:flex;align-items:center;justify-content:center;height:64px;border:1.5px dashed var(--border);border-radius:12px;cursor:pointer;font-size:22px;color:var(--text-muted);">
+          <p class="text-xs text-[var(--text-secondary)] font-medium mb-1">Fotos</p>
+          <label style="display:flex;align-items:center;justify-content:center;height:44px;border:1.5px dashed var(--border);border-radius:12px;cursor:pointer;font-size:18px;color:var(--text-muted);">
             +
             <input type="file" name="fotos" accept="image/*" multiple class="hidden" onchange="mostrarNombresFotos(this)">
           </label>
           <p id="nombresFotos" class="text-xs text-[var(--text-muted)] mt-1"></p>
         </div>
 
-        <label class="flex items-start gap-2 p-3 rounded-xl" style="background:var(--bg-warning);">
+        <label class="flex items-start gap-2 p-2 rounded-xl" style="background:var(--bg-warning);">
           <input type="checkbox" name="aceptaCondiciones" class="w-auto mt-1" required>
           <span class="text-xs" style="color:var(--text-warning);">Acepto que fui informado sobre las condiciones y riesgos del servicio, asumiendo la total responsabilidad como cliente.</span>
         </label>
 
-        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Modo de pago</p>
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Modo de pago</p>
         <div class="flex gap-6">
           <label class="flex items-center gap-2 text-sm"><input type="radio" name="modoPago" value="Transferencia" class="w-auto"> Transferencia</label>
           <label class="flex items-center gap-2 text-sm"><input type="radio" name="modoPago" value="Efectivo" class="w-auto"> Efectivo</label>
         </div>
-        <input type="number" name="costo" placeholder="$ 0.00" step="0.01" min="0">
+        <input type="number" name="costo" placeholder="$ 0.00" step="0.01" min="0" style="padding:10px 14px;">
 
-        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Firma del cliente</p>
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Firma del cliente</p>
         <p class="text-xs text-[var(--text-muted)] mb-1">El cliente firma con el dedo:</p>
-        <canvas id="canvasFirma" width="400" height="150" style="width:100%;height:150px;border:1px solid var(--border);border-radius:12px;touch-action:none;background:var(--surface-2);"></canvas>
+        <canvas id="canvasFirma" width="400" height="100" style="width:100%;height:100px;border:1px solid var(--border);border-radius:12px;touch-action:none;background:var(--surface-2);"></canvas>
         <button type="button" onclick="limpiarFirma()" class="text-xs" style="color:var(--text-secondary);background:none;border:none;padding:4px 0;width:auto;height:auto;">🗑 Limpiar firma</button>
 
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="cerrarModalMantenimiento()" class="btn-secondary flex-1">Cancelar</button>
-          <button type="submit" class="btn-primary flex-1">Guardar visita</button>
+        <div class="flex gap-3 pt-1">
+          <button type="button" onclick="cerrarModalMantenimiento()" class="btn-secondary flex-1" style="padding:10px 20px;">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1" style="padding:10px 20px;">Guardar visita</button>
         </div>
         <p class="text-xs text-[var(--text-muted)] text-center">Al guardar se genera automáticamente un PDF con estos datos, fotos y firma.</p>
       </form>
@@ -229,8 +235,20 @@
         return `<input type="text" name="campo_${c.key}" placeholder="${c.label}${c.required ? ' *' : ''}" ${c.required ? 'required' : ''}>`;
       }).join('');
 
-      // Fecha de próximo mantenimiento, común a todos los tipos
-      cont.innerHTML += `<input type="date" name="proximoMantenimiento" placeholder="Próximo mantenimiento">`;
+      // Frecuencia de mantenimiento, común a todos los tipos: la secretaria elige
+      // cada cuántos meses toca el mantenimiento y el sistema calcula la fecha
+      // y envía las alertas automáticamente (1 semana antes y el mismo día).
+      cont.innerHTML += `
+        <select name="intervaloMeses">
+          <option value="0">Sin mantenimiento periódico</option>
+          <option value="3">Cada 3 meses</option>
+          <option value="4">Cada 4 meses</option>
+          <option value="5">Cada 5 meses</option>
+          <option value="6">Cada 6 meses</option>
+          <option value="12">Cada 12 meses</option>
+        </select>
+        <p class="text-xs text-[var(--text-muted)] -mt-2">El sistema calculará la próxima fecha desde hoy y avisará 1 semana antes y el mismo día del mantenimiento.</p>
+      `;
 
       const contenedorOtro = document.getElementById('camposOtroContainer');
       const listaOtro = document.getElementById('listaCamposOtro');
@@ -283,10 +301,13 @@
         if (camposCustom.length > 0) datosEspecificos.camposCustom = camposCustom;
       }
 
+      const intervaloMeses = parseInt(fd.get('intervaloMeses') || '0', 10);
+      datosEspecificos.intervaloMeses = intervaloMeses;
+
       const resultado = await agregarEquipo({
         nombre: datosEspecificos.nombre || '',
         ubicacion: datosEspecificos.ubicacion || '',
-        proximoMantenimiento: fd.get('proximoMantenimiento'),
+        proximoMantenimiento: intervaloMeses > 0 ? sumarMeses(new Date(), intervaloMeses) : '',
         tipo: tipoEquipoActual,
         datosEspecificos
       });
@@ -348,9 +369,12 @@
 
       // Muestra los datos específicos del tipo de equipo (marca, modelo, btu, etc.)
       const datosExtra = Object.entries(equipo.datosEspecificos || {})
-        .filter(([k]) => k !== 'nombre' && k !== 'ubicacion' && k !== 'camposCustom')
+        .filter(([k]) => k !== 'nombre' && k !== 'ubicacion' && k !== 'camposCustom' && k !== 'intervaloMeses')
         .map(([k, v]) => `<span class="text-xs text-[var(--text-secondary)] mr-3">${k}: <strong>${v}</strong></span>`)
         .join('');
+
+      const intervaloMeses = parseInt(equipo.datosEspecificos?.intervaloMeses || 0, 10);
+      const textoFrecuencia = intervaloMeses > 0 ? `cada ${intervaloMeses} meses` : 'sin mantenimiento periódico';
 
       const camposCustom = (equipo.datosEspecificos?.camposCustom || [])
         .map(c => `<span class="text-xs text-[var(--text-secondary)] mr-3">${c.label}: <strong>${c.valor}</strong></span>`)
@@ -360,7 +384,7 @@
         <div class="flex justify-between items-start mb-4">
           <div>
             <h2 class="title-font text-lg font-medium">${equipo.nombre}</h2>
-            <p class="text-sm text-[var(--text-secondary)] mb-1">${equipo.ubicacion} · Próx: ${equipo.proximoMantenimiento || 'sin definir'}</p>
+            <p class="text-sm text-[var(--text-secondary)] mb-1">${equipo.ubicacion} · Próx: ${equipo.proximoMantenimiento || 'sin definir'} (${textoFrecuencia})</p>
             <div>${datosExtra}${camposCustom}</div>
           </div>
           <div class="flex gap-2 flex-shrink-0">
@@ -425,9 +449,28 @@
       document.getElementById('nombresFotos').textContent = nombres;
     }
 
+    // Suma N meses a una fecha y devuelve "YYYY-MM-DD"
+    function sumarMeses(fecha, meses) {
+      const f = new Date(fecha);
+      f.setMonth(f.getMonth() + meses);
+      const yyyy = f.getFullYear();
+      const mm = String(f.getMonth() + 1).padStart(2, '0');
+      const dd = String(f.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function fechaDeHoyYMD() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     function abrirModalMantenimiento() {
       document.getElementById('modalMantenimiento').classList.remove('hidden-el');
       document.getElementById('modalMantenimiento').classList.add('flex');
+      document.querySelector('#formMantenimiento [name="fecha"]').value = fechaDeHoyYMD();
       if (!canvasFirma) inicializarCanvasFirma();
       setTimeout(limpiarFirma, 0);
     }
@@ -478,13 +521,27 @@
 
       if (!resultado.ok) { alert('Error al guardar el mantenimiento.'); return; }
 
+      // Recalcula la próxima fecha de mantenimiento a partir de la frecuencia
+      // configurada en el equipo (si tiene mantenimiento periódico)
+      const equipoActual = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+      const intervaloMeses = parseInt(equipoActual?.datosEspecificos?.intervaloMeses || 0, 10);
+      if (equipoActual && intervaloMeses > 0) {
+        const nuevaFecha = sumarMeses(new Date(fd.get('fecha') + 'T00:00:00'), intervaloMeses);
+        await actualizarProximoMantenimiento(equipoSeleccionadoId, nuevaFecha);
+        equipoActual.proximoMantenimiento = nuevaFecha;
+      }
+
       cerrarModalMantenimiento();
       renderDetalleEquipo();
       alert('Visita guardada. El PDF se generó con los datos, fotos y firma ingresados.');
     });
 
     // ---- Modal subir PDF externo ----
-    function abrirModalSubirPdf() { document.getElementById('modalSubirPdf').classList.remove('hidden-el'); document.getElementById('modalSubirPdf').classList.add('flex'); }
+    function abrirModalSubirPdf() {
+      document.getElementById('modalSubirPdf').classList.remove('hidden-el');
+      document.getElementById('modalSubirPdf').classList.add('flex');
+      document.querySelector('#formSubirPdf [name="fecha"]').value = fechaDeHoyYMD();
+    }
     function cerrarModalSubirPdf() { document.getElementById('modalSubirPdf').classList.add('hidden-el'); document.getElementById('modalSubirPdf').classList.remove('flex'); document.getElementById('formSubirPdf').reset(); document.getElementById('errorPdfExterno').style.display='none'; }
 
     document.getElementById('formSubirPdf').addEventListener('submit', async function(e) {
