@@ -40,7 +40,7 @@ function doPost(e) {
       resultado = guardarProveedor(body.datos);
       break;
     case 'actualizarEstadoProveedor':
-      resultado = actualizarEstadoProveedor(body.id, body.estado, body.camposConError);
+      resultado = actualizarEstadoProveedor(body.id, body.estado, body.camposConError, body.observacion);
       break;
     case 'agregarEquipo':
       resultado = agregarEquipo(body.datos);
@@ -127,7 +127,7 @@ function guardarProveedor(datos) {
   return { ok: true, id, linkToken };
 }
 
-function actualizarEstadoProveedor(id, estado, camposConError) {
+function actualizarEstadoProveedor(id, estado, camposConError, observacion) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
   const data = sheet.getDataRange().getValues();
   const rowIndex = data.findIndex(row => row[0] === id);
@@ -136,9 +136,11 @@ function actualizarEstadoProveedor(id, estado, camposConError) {
   const colEstado = 24; // ajustar según el orden real de columnas
   const colCampos = 25;
   const colToken = 26;
+  const colObservacion = 27; // nueva columna "Observación" al final del Sheet
 
   sheet.getRange(rowIndex + 1, colEstado + 1).setValue(estado);
   sheet.getRange(rowIndex + 1, colCampos + 1).setValue((camposConError || []).join(', '));
+  sheet.getRange(rowIndex + 1, colObservacion + 1).setValue(observacion || '');
 
   const razonSocial = data[rowIndex][2];
   const correoProveedor = data[rowIndex][9];
@@ -146,10 +148,11 @@ function actualizarEstadoProveedor(id, estado, camposConError) {
   const linkCorreccion = `TU_URL_DEL_FORMULARIO_PUBLICADO?token=${token}`;
 
   if (estado === 'no-verificado') {
+    const mensajeObservacion = observacion ? `\n${observacion}\n` : '';
     MailApp.sendEmail({
       to: correoProveedor,
       subject: 'Corrección requerida - Registro de proveedor Acerimallas',
-      body: `Estimado proveedor,\n\nSe encontraron observaciones en su registro. Por favor ingrese al siguiente link para corregir:\n${linkCorreccion}\n\nGracias.`
+      body: `Estimado proveedor,\n\nSe encontraron observaciones en su registro.${mensajeObservacion}\nPor favor ingrese al siguiente link para corregir:\n${linkCorreccion}\n\nGracias.`
     });
     registrarAlerta(`Proveedor ${razonSocial} marcado como no verificado.`, 'warning');
   } else if (estado === 'verificado') {
@@ -177,7 +180,16 @@ function listarProveedores() {
 function agregarEquipo(datos) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
   const id = Utilities.getUuid();
-  sheet.appendRow([id, datos.proveedorId, datos.nombre, datos.ubicacion, datos.serie, datos.proximoMantenimiento]);
+  sheet.appendRow([
+    id,
+    datos.proveedorId || '',
+    datos.nombre,
+    datos.ubicacion,
+    datos.serie || '',
+    datos.proximoMantenimiento || '',
+    datos.tipo || 'otro',
+    JSON.stringify(datos.datosEspecificos || {})
+  ]);
   return { ok: true, id };
 }
 

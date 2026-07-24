@@ -191,6 +191,17 @@ input.input-error, select.input-error {
   color: #FCA5A5;
 }
 
+.campo-obligatorio {
+  background: rgba(43, 95, 82, 0.06);
+  border-left: 3px solid var(--accent);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.dark .campo-obligatorio {
+  background: rgba(95, 168, 143, 0.1);
+}
+
 /* Utilidades */
 .text-muted { color: var(--text-muted); }
 .rounded-3xl { border-radius: 24px; }

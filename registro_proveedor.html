@@ -29,106 +29,109 @@
       <form id="providerForm" class="space-y-10" novalidate>
 
         <!-- 1. Correo -->
-        <section>
+        <section id="campo-1">
           <label class="block font-medium mb-2">1. Correo electrónico *</label>
-          <input type="email" name="correo" required>
+          <input type="email" name="correo" id="inputCorreo" required>
+          <p class="text-xs text-[var(--text-muted)] mt-2">Ingrese su correo para habilitar el resto del formulario.</p>
         </section>
 
+        <fieldset id="camposCondicionales" style="opacity:0.4;" disabled>
+
         <!-- 2. Tipo de proveedor -->
-        <section>
+        <section id="campo-2">
           <label class="block font-medium mb-3">2. Datos del proveedor *</label>
           <div class="flex flex-wrap gap-6">
-            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Juridica" class="w-auto" required onchange="toggleOtros()"> Persona Jurídica</label>
-            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Natural" class="w-auto" onchange="toggleOtros()"> Persona Natural</label>
-            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Otros" class="w-auto" onchange="toggleOtros()"> Otros</label>
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Juridica" class="w-auto" required onchange="actualizarTipoProveedor()"> Persona Jurídica</label>
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Natural" class="w-auto" onchange="actualizarTipoProveedor()"> Persona Natural</label>
+            <label class="flex items-center gap-2"><input type="radio" name="tipoProveedor" value="Otros" class="w-auto" onchange="actualizarTipoProveedor()"> Otros</label>
           </div>
         </section>
 
         <!-- 3. Especifique otros (condicional) -->
-        <section id="otrosField" class="hidden-el">
+        <section id="campo-3" class="hidden-el">
           <label class="block font-medium mb-2">3. Si su respuesta anterior fue "Otros", especifique</label>
           <input type="text" name="otrosEspecificar">
         </section>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- 4. Razón social -->
-          <section>
+          <section id="campo-4">
             <label class="block font-medium mb-2">4. Razón social *</label>
             <input type="text" name="razonSocial" required>
           </section>
 
           <!-- 5. Nombre comercial -->
-          <section>
+          <section id="campo-5">
             <label class="block font-medium mb-2">5. Nombre comercial</label>
             <input type="text" name="nombreComercial">
           </section>
 
           <!-- 6. RUC -->
-          <section>
+          <section id="campo-6">
             <label class="block font-medium mb-2">6. Número de RUC</label>
             <input type="text" name="ruc">
           </section>
 
           <!-- 7. Adjuntar RUC -->
-          <section>
+          <section id="campo-7">
             <label class="block font-medium mb-2">7. Adjuntar RUC actualizado / SRI *</label>
             <input type="file" name="archivoRuc" accept="application/pdf" required onchange="validatePdf(this)">
             <p class="error-text" data-error-for="archivoRuc">Solo se aceptan archivos PDF.</p>
           </section>
 
           <!-- 8. Teléfono 1 -->
-          <section>
+          <section id="campo-8">
             <label class="block font-medium mb-2">8. Teléfono 1 *</label>
             <input type="tel" name="telefono1" required>
           </section>
 
           <!-- 9. Teléfono 2 -->
-          <section>
+          <section id="campo-9">
             <label class="block font-medium mb-2">9. Teléfono 2</label>
             <input type="tel" name="telefono2">
           </section>
 
           <!-- 10. Ciudad -->
-          <section>
+          <section id="campo-10">
             <label class="block font-medium mb-2">10. Ciudad *</label>
             <input type="text" name="ciudad" required>
           </section>
 
           <!-- 11. Provincia -->
-          <section>
+          <section id="campo-11">
             <label class="block font-medium mb-2">11. Provincia *</label>
             <input type="text" name="provincia" required>
           </section>
 
           <!-- 12. Correo retenciones -->
-          <section>
+          <section id="campo-12">
             <label class="block font-medium mb-2">12. Correo electrónico (recepción de retenciones) *</label>
             <input type="email" name="correoRetenciones" required>
           </section>
 
           <!-- 13. Dirección -->
-          <section>
+          <section id="campo-13">
             <label class="block font-medium mb-2">13. Dirección *</label>
             <input type="text" name="direccion" required>
           </section>
         </div>
 
         <!-- 14. Representante legal -->
-        <section>
+        <section id="campo-14">
           <label class="block font-medium mb-2">14. Datos del representante legal (Nombre / Cédula / Email)</label>
           <input type="text" name="representanteLegal" placeholder="Nombre completo, cédula, correo">
         </section>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- 15. Documento representante -->
-          <section>
+          <section id="campo-15">
             <label class="block font-medium mb-2">15. Adjuntar documento del representante legal (cédula y certificado de votación)</label>
             <input type="file" name="archivoRepLegal" accept="application/pdf" onchange="validatePdf(this)">
             <p class="error-text" data-error-for="archivoRepLegal">Solo se aceptan archivos PDF.</p>
           </section>
 
-          <!-- 16. Nombramiento representante -->
-          <section>
+          <!-- 16. Nombramiento representante (solo Persona Jurídica) -->
+          <section id="campo-16">
             <label class="block font-medium mb-2">16. Adjuntar nombramiento del representante legal (Persona Jurídica)</label>
             <input type="file" name="archivoNombramiento" accept="application/pdf" onchange="validatePdf(this)">
             <p class="error-text" data-error-for="archivoNombramiento">Solo se aceptan archivos PDF.</p>
@@ -137,18 +140,18 @@
 
         <!-- 17-18. Contactos adicionales -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <section>
+          <section id="campo-17">
             <label class="block font-medium mb-2">17. Contacto adicional 1 (nombre, teléfono, email) *</label>
             <input type="text" name="contacto1" required>
           </section>
-          <section>
+          <section id="campo-18">
             <label class="block font-medium mb-2">18. Contacto adicional 2 (nombre, teléfono, email)</label>
             <input type="text" name="contacto2">
           </section>
         </div>
 
         <!-- 19. Forma de pago -->
-        <section>
+        <section id="campo-19">
           <label class="block font-medium mb-3">19. Forma de pago</label>
           <div class="flex flex-wrap gap-6">
             <label class="flex items-center gap-2"><input type="radio" name="formaPago" value="Contado" class="w-auto"> Contado (Transferencia bancaria)</label>
@@ -157,7 +160,7 @@
         </section>
 
         <!-- 20. Datos bancarios -->
-        <section>
+        <section id="campo-20">
           <label class="block font-medium mb-3">20. Datos bancarios</label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <input type="text" name="entidadBancaria" placeholder="Entidad bancaria *" required>
@@ -172,14 +175,14 @@
         </section>
 
         <!-- 21. Certificado bancario -->
-        <section>
+        <section id="campo-21">
           <label class="block font-medium mb-2">21. Adjuntar certificado bancario *</label>
           <input type="file" name="archivoCertBancario" accept="application/pdf" required onchange="validatePdf(this)">
           <p class="error-text" data-error-for="archivoCertBancario">Solo se aceptan archivos PDF.</p>
         </section>
 
         <!-- 22. Área de servicio -->
-        <section>
+        <section id="campo-22">
           <label class="block font-medium mb-3">22. Área a la que pertenece el servicio o artículos que ofrece</label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros y herramientas industriales" class="w-auto"> Suministros y herramientas industriales</label>
@@ -199,7 +202,7 @@
         </section>
 
         <!-- 24. Autorización -->
-        <section>
+        <section id="campo-24">
           <label class="flex items-start gap-3">
             <input type="checkbox" name="autorizaTratamiento" class="w-auto mt-1" required>
             <span class="text-sm">24. Autorizo a Acerimallas S.A. a tratar mis datos para: validación comercial y contractual, gestión de pagos y obligaciones financieras, cumplimiento tributario y contable, verificación en fuentes públicas o buros autorizados. *</span>
@@ -207,12 +210,14 @@
         </section>
 
         <!-- 25. Aceptación política -->
-        <section>
+        <section id="campo-25">
           <label class="flex items-start gap-3">
             <input type="checkbox" name="aceptaPolitica" class="w-auto mt-1" required>
             <span class="text-sm">25. He leído y acepto la Política de privacidad. *</span>
           </label>
         </section>
+
+        </fieldset>
 
         <button type="submit" class="btn-primary w-full py-6 rounded-2xl text-lg font-medium flex items-center justify-center gap-3">
           <i class="fa-solid fa-paper-plane"></i>
@@ -230,9 +235,62 @@
 
   <script src="js/store.js"></script>
   <script>
-    function toggleOtros() {
-      const value = document.querySelector('input[name="tipoProveedor"]:checked')?.value;
-      document.getElementById('otrosField').classList.toggle('hidden-el', value !== 'Otros');
+    // ---- Mapeo de número de pregunta -> nombre(s) de campo ----
+    const NUMEROS_A_NOMBRES = {
+      3: ['otrosEspecificar'], 4: ['razonSocial'], 5: ['nombreComercial'], 6: ['ruc'],
+      7: ['archivoRuc'], 8: ['telefono1'], 9: ['telefono2'], 10: ['ciudad'], 11: ['provincia'],
+      12: ['correoRetenciones'], 13: ['direccion'], 14: ['representanteLegal'], 15: ['archivoRepLegal'],
+      16: ['archivoNombramiento'], 17: ['contacto1'], 18: ['contacto2'], 19: ['formaPago'],
+      20: ['entidadBancaria', 'tipoCuenta', 'numeroCuenta', 'titularCuenta'], 21: ['archivoCertBancario'],
+      22: ['area']
+    };
+
+    const REQUERIDOS_JURIDICA = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22];
+    const REQUERIDOS_NATURAL = [4,5,6,7,8,9,10,11,12,13,14,15,17,19,20,21,22];
+
+    let camposRequeridosActuales = new Set();
+
+    // ---- 1. Bloquear el resto del formulario hasta que haya un correo válido ----
+    function correoEsValido(valor) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor || '');
+    }
+
+    document.getElementById('inputCorreo').addEventListener('input', function() {
+      const habilitado = correoEsValido(this.value);
+      const fieldset = document.getElementById('camposCondicionales');
+      fieldset.disabled = !habilitado;
+      fieldset.style.opacity = habilitado ? '1' : '0.4';
+    });
+
+    // ---- 2/3. Mostrar campo "Otros" y aplicar reglas por tipo de proveedor ----
+    function actualizarTipoProveedor() {
+      const tipo = document.querySelector('input[name="tipoProveedor"]:checked')?.value;
+      document.getElementById('campo-3').classList.toggle('hidden-el', tipo !== 'Otros');
+
+      let requeridos;
+      if (tipo === 'Juridica') requeridos = REQUERIDOS_JURIDICA;
+      else if (tipo === 'Natural') requeridos = REQUERIDOS_NATURAL;
+      else if (tipo === 'Otros') requeridos = [...REQUERIDOS_NATURAL, 3];
+      else requeridos = [];
+
+      camposRequeridosActuales = new Set(requeridos);
+
+      // Campo 16 (nombramiento) es EXCLUSIVO de Persona Jurídica: se oculta y deshabilita para los demás
+      const esJuridica = tipo === 'Juridica';
+      const campo16 = document.getElementById('campo-16');
+      const inputArchivoNombramiento = document.querySelector('input[name="archivoNombramiento"]');
+      campo16.classList.toggle('hidden-el', !esJuridica);
+      inputArchivoNombramiento.disabled = !esJuridica;
+      if (!esJuridica) inputArchivoNombramiento.value = '';
+
+      // Sombrear visualmente los campos obligatorios según el tipo elegido
+      Object.keys(NUMEROS_A_NOMBRES).forEach(n => {
+        const num = parseInt(n);
+        if (num === 16) return; // manejado aparte arriba
+        const campoEl = document.getElementById('campo-' + num);
+        if (!campoEl) return;
+        campoEl.classList.toggle('campo-obligatorio', camposRequeridosActuales.has(num));
+      });
     }
 
     // Validación: solo PDF permitido en adjuntos
@@ -252,8 +310,55 @@
       }
     }
 
+    // ---- Validación completa antes de enviar ----
+    function marcarCampoConError(nombre, conError) {
+      const campoEl = document.querySelector(`[name="${nombre}"]`)?.closest('section') || document.getElementById('campo-' + nombre);
+      if (campoEl) campoEl.style.outline = conError ? '2px solid var(--danger)' : 'none';
+    }
+
+    function formularioEsValido() {
+      const nombresRequeridos = new Set(['correo', 'tipoProveedor', 'autorizaTratamiento', 'aceptaPolitica']);
+      const tipo = document.querySelector('input[name="tipoProveedor"]:checked')?.value;
+      if (tipo === 'Otros') nombresRequeridos.add('otrosEspecificar');
+      camposRequeridosActuales.forEach(num => (NUMEROS_A_NOMBRES[num] || []).forEach(n => nombresRequeridos.add(n)));
+
+      let faltaAlguno = false;
+
+      nombresRequeridos.forEach(nombre => {
+        const elementos = document.getElementsByName(nombre);
+        if (elementos.length === 0) return;
+        const primero = elementos[0];
+        let vacio;
+
+        if (primero.type === 'radio' || (primero.type === 'checkbox' && elementos.length > 1)) {
+          vacio = !Array.from(elementos).some(el => el.checked);
+        } else if (primero.type === 'checkbox') {
+          vacio = !primero.checked;
+        } else if (primero.type === 'file') {
+          vacio = primero.files.length === 0;
+        } else {
+          vacio = !primero.value || !primero.value.trim();
+        }
+
+        marcarCampoConError(nombre, vacio);
+        if (vacio) faltaAlguno = true;
+      });
+
+      return !faltaAlguno;
+    }
+
     document.getElementById('providerForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+
+      if (!correoEsValido(document.getElementById('inputCorreo').value)) {
+        alert('Ingrese un correo electrónico válido para continuar.');
+        return;
+      }
+
+      if (!formularioEsValido()) {
+        alert('Para enviar el formulario debe llenar todos los campos obligatorios.');
+        return;
+      }
 
       // Revalida que ningún adjunto quedó marcado con error
       const invalidFile = this.querySelector('input[type="file"].input-error');

@@ -30,29 +30,29 @@
 
     // Campos del formulario de 25 preguntas (etiqueta visible + llave en el objeto proveedor)
     const CAMPOS = [
-      { key: 'tipoProveedor', label: 'Tipo de proveedor' },
-      { key: 'razonSocial', label: 'Razón social' },
-      { key: 'nombreComercial', label: 'Nombre comercial' },
-      { key: 'ruc', label: 'RUC' },
-      { key: 'archivoRuc', label: 'RUC actualizado / SRI (PDF)', esArchivo: true },
-      { key: 'telefono1', label: 'Teléfono 1' },
-      { key: 'telefono2', label: 'Teléfono 2' },
-      { key: 'ciudad', label: 'Ciudad' },
-      { key: 'provincia', label: 'Provincia' },
-      { key: 'correoRetenciones', label: 'Correo (retenciones)' },
-      { key: 'direccion', label: 'Dirección' },
-      { key: 'representanteLegal', label: 'Representante legal' },
-      { key: 'archivoRepLegal', label: 'Documento representante legal (PDF)', esArchivo: true },
-      { key: 'archivoNombramiento', label: 'Nombramiento representante (PDF)', esArchivo: true },
-      { key: 'contacto1', label: 'Contacto adicional 1' },
-      { key: 'contacto2', label: 'Contacto adicional 2' },
-      { key: 'formaPago', label: 'Forma de pago' },
-      { key: 'entidadBancaria', label: 'Entidad bancaria' },
-      { key: 'tipoCuenta', label: 'Tipo de cuenta' },
-      { key: 'numeroCuenta', label: 'Número de cuenta' },
-      { key: 'titularCuenta', label: 'Titular de la cuenta' },
-      { key: 'certificadoBancario', label: 'Certificado bancario (PDF)', esArchivo: true },
-      { key: 'area', label: 'Área de servicio' },
+      { key: 'tipoProveedor', label: '2. Tipo de proveedor' },
+      { key: 'razonSocial', label: '4. Razón social' },
+      { key: 'nombreComercial', label: '5. Nombre comercial' },
+      { key: 'ruc', label: '6. RUC' },
+      { key: 'archivoRuc', label: '7. RUC actualizado / SRI (PDF)', esArchivo: true },
+      { key: 'telefono1', label: '8. Teléfono 1' },
+      { key: 'telefono2', label: '9. Teléfono 2' },
+      { key: 'ciudad', label: '10. Ciudad' },
+      { key: 'provincia', label: '11. Provincia' },
+      { key: 'correoRetenciones', label: '12. Correo (retenciones)' },
+      { key: 'direccion', label: '13. Dirección' },
+      { key: 'representanteLegal', label: '14. Representante legal' },
+      { key: 'archivoRepLegal', label: '15. Documento representante legal (PDF)', esArchivo: true },
+      { key: 'archivoNombramiento', label: '16. Nombramiento representante (PDF)', esArchivo: true },
+      { key: 'contacto1', label: '17. Contacto adicional 1' },
+      { key: 'contacto2', label: '18. Contacto adicional 2' },
+      { key: 'formaPago', label: '19. Forma de pago' },
+      { key: 'entidadBancaria', label: '20. Entidad bancaria' },
+      { key: 'tipoCuenta', label: '20. Tipo de cuenta' },
+      { key: 'numeroCuenta', label: '20. Número de cuenta' },
+      { key: 'titularCuenta', label: '20. Titular de la cuenta' },
+      { key: 'certificadoBancario', label: '21. Certificado bancario (PDF)', esArchivo: true },
+      { key: 'area', label: '22. Área de servicio' },
     ];
 
     function badgeFor(estado) {
@@ -79,9 +79,6 @@
             <h1 class="title-font text-2xl font-semibold">${p.razonSocial}</h1>
             <div class="mt-2">${badgeFor(p.estado)}</div>
           </div>
-          <a href="equipos_mantenimiento.html?proveedorId=${p.id}" class="btn-secondary text-sm py-2 px-4 flex items-center gap-2 whitespace-nowrap">
-            <i class="fa-solid fa-toolbox"></i> Ver equipos y mantenimientos
-          </a>
         </div>
 
         <p class="text-sm text-[var(--text-secondary)] mb-4">Marca la casilla del campo que tenga error</p>
@@ -101,6 +98,12 @@
               </span>
             </div>
           `).join('')}
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium mb-2">Observación para el proveedor</label>
+          <textarea id="observacionSecretaria" rows="3" placeholder="Ej: Estimado proveedor, hemos revisado sus datos y el 20 no tiene el certificado bancario, vino en blanco. El 15 el PDF de su cédula no se ve claro o falta la papeleta de votación.">${p.observacion || ''}</textarea>
+          <p class="text-xs text-[var(--text-muted)] mt-1">Este mensaje se incluye en el correo cuando marcas "No verificado".</p>
         </div>
 
         <div class="flex gap-4">
@@ -131,7 +134,8 @@
       const botones = document.querySelectorAll('.flex.gap-4 button');
       botones.forEach(b => b.disabled = true);
 
-      const resultado = await actualizarEstadoProveedor(proveedorActual.id, nuevoEstado, camposConError);
+      const observacion = document.getElementById('observacionSecretaria').value.trim();
+      const resultado = await actualizarEstadoProveedor(proveedorActual.id, nuevoEstado, camposConError, observacion);
 
       if (!resultado.ok) {
         alert('Ocurrió un error al actualizar. Intenta de nuevo.');

@@ -19,8 +19,8 @@
     </a>
 
     <div class="flex justify-between items-center mb-6">
-      <h1 id="tituloProveedor" class="title-font text-2xl font-semibold">Equipos</h1>
-      <button onclick="abrirModalEquipo()" class="btn-primary flex items-center gap-2">
+      <h1 class="title-font text-2xl font-semibold">Mantenimientos · Equipos</h1>
+      <button onclick="abrirSelectorTipo()" class="btn-primary flex items-center gap-2">
         <i class="fa-solid fa-plus"></i> Agregar nuevo equipo
       </button>
     </div>
@@ -35,15 +35,39 @@
     </div>
   </div>
 
-  <!-- MODAL: Agregar equipo -->
-  <div id="modalEquipo" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6">
+  <!-- MODAL: Selector de tipo de equipo -->
+  <div id="modalSelectorTipo" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6">
     <div class="card p-8 max-w-md w-full">
-      <h2 class="title-font text-xl mb-4">Agregar nuevo equipo</h2>
+      <h2 class="title-font text-xl mb-4">¿Qué tipo de equipo vas a agregar?</h2>
+      <div class="space-y-2">
+        <button onclick="abrirFormularioTipo('ac')" class="btn-secondary w-full text-left flex items-center gap-3">
+          <i class="fa-solid fa-fan"></i> Aire acondicionado
+        </button>
+        <button onclick="abrirFormularioTipo('montacargas')" class="btn-secondary w-full text-left flex items-center gap-3">
+          <i class="fa-solid fa-truck-ramp-box"></i> Montacargas
+        </button>
+        <button onclick="abrirFormularioTipo('computadora')" class="btn-secondary w-full text-left flex items-center gap-3">
+          <i class="fa-solid fa-computer"></i> Computadora / Impresora
+        </button>
+        <button onclick="abrirFormularioTipo('otro')" class="btn-secondary w-full text-left flex items-center gap-3">
+          <i class="fa-solid fa-cube"></i> Otro
+        </button>
+      </div>
+      <button onclick="cerrarSelectorTipo()" class="btn-secondary w-full mt-4">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL: Formulario de equipo (campos cambian según el tipo elegido) -->
+  <div id="modalEquipo" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6 overflow-y-auto">
+    <div class="card p-8 max-w-md w-full my-8">
+      <h2 class="title-font text-xl mb-4" id="tituloFormularioEquipo">Agregar equipo</h2>
       <form id="formEquipo" class="space-y-4">
-        <input type="text" name="nombre" placeholder="Nombre del equipo *" required>
-        <input type="text" name="ubicacion" placeholder="Ubicación *" required>
-        <input type="text" name="serie" placeholder="Número de serie">
-        <input type="date" name="proximoMantenimiento">
+        <div id="camposTipoEquipo"></div>
+        <div id="camposOtroContainer" class="space-y-2 hidden-el">
+          <p class="text-xs text-[var(--text-secondary)]">Campos personalizados</p>
+          <div id="listaCamposOtro" class="space-y-2"></div>
+          <button type="button" onclick="agregarCampoOtro()" class="btn-secondary w-full text-sm py-2">+ Agregar campo</button>
+        </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="cerrarModalEquipo()" class="btn-secondary flex-1">Cancelar</button>
           <button type="submit" class="btn-primary flex-1">Guardar equipo</button>
@@ -98,18 +122,161 @@
 
   <script src="js/store.js"></script>
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const proveedorId = params.get('proveedorId');
     let equipoSeleccionadoId = null;
     let equiposCache = [];
     let mantenimientosCache = [];
+    let tipoEquipoActual = null;
+    let contadorCamposOtro = 0;
 
+    // ---- Definición de campos por tipo de equipo ----
+    const CAMPOS_POR_TIPO = {
+      ac: {
+        titulo: 'Aire acondicionado',
+        campos: [
+          { key: 'nombre', label: 'Nombre del lugar (ej. Enfermería)', required: true },
+          { key: 'tipoAire', label: 'Tipo de aire', tipo: 'select', opciones: ['Split', 'Central', 'Ventana'] },
+          { key: 'btu', label: 'Capacidad BTU', tipo: 'select', opciones: ['12000', '24000', '36000'] },
+          { key: 'codigoAire', label: 'Código de aire (opcional)' },
+          { key: 'ubicacion', label: 'Ubicación (ej. Torre 1)', required: true },
+        ]
+      },
+      montacargas: {
+        titulo: 'Montacargas',
+        campos: [
+          { key: 'numeroMontacargas', label: 'Número de montacargas', required: true },
+          { key: 'marca', label: 'Marca' },
+          { key: 'modelo', label: 'Modelo' },
+          { key: 'anio', label: 'Año' },
+          { key: 'operador', label: 'Operador' },
+          { key: 'nombre', label: 'Nombre del lugar (ej. Bodega)', required: true },
+          { key: 'ubicacion', label: 'Ubicación (ej. Planta baja)', required: true },
+        ]
+      },
+      computadora: {
+        titulo: 'Computadora / Impresora',
+        campos: [
+          { key: 'marca', label: 'Marca' },
+          { key: 'modelo', label: 'Modelo' },
+          { key: 'anio', label: 'Año' },
+          { key: 'procesador', label: 'Procesador' },
+          { key: 'ram', label: 'RAM' },
+          { key: 'discoDuro', label: 'Disco duro' },
+          { key: 'ultimoSoftware', label: 'Último software instalado' },
+          { key: 'nombre', label: 'Nombre del lugar (ej. Bodega)', required: true },
+          { key: 'ubicacion', label: 'Ubicación (ej. Planta alta)', required: true },
+        ]
+      },
+      otro: {
+        titulo: 'Otro equipo',
+        campos: [
+          { key: 'nombre', label: 'Nombre del equipo/lugar', required: true },
+          { key: 'ubicacion', label: 'Ubicación', required: true },
+        ]
+      }
+    };
+
+    // ---- Selector de tipo ----
+    function abrirSelectorTipo() {
+      document.getElementById('modalSelectorTipo').classList.remove('hidden-el');
+      document.getElementById('modalSelectorTipo').classList.add('flex');
+    }
+    function cerrarSelectorTipo() {
+      document.getElementById('modalSelectorTipo').classList.add('hidden-el');
+      document.getElementById('modalSelectorTipo').classList.remove('flex');
+    }
+
+    function abrirFormularioTipo(tipo) {
+      cerrarSelectorTipo();
+      tipoEquipoActual = tipo;
+      contadorCamposOtro = 0;
+
+      const config = CAMPOS_POR_TIPO[tipo];
+      document.getElementById('tituloFormularioEquipo').textContent = 'Agregar equipo · ' + config.titulo;
+
+      const cont = document.getElementById('camposTipoEquipo');
+      cont.innerHTML = config.campos.map(c => {
+        if (c.tipo === 'select') {
+          return `<select name="campo_${c.key}" ${c.required ? 'required' : ''}>
+            <option value="">${c.label}${c.required ? ' *' : ''}</option>
+            ${c.opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
+          </select>`;
+        }
+        return `<input type="text" name="campo_${c.key}" placeholder="${c.label}${c.required ? ' *' : ''}" ${c.required ? 'required' : ''}>`;
+      }).join('');
+
+      // Fecha de próximo mantenimiento, común a todos los tipos
+      cont.innerHTML += `<input type="date" name="proximoMantenimiento" placeholder="Próximo mantenimiento">`;
+
+      const contenedorOtro = document.getElementById('camposOtroContainer');
+      const listaOtro = document.getElementById('listaCamposOtro');
+      listaOtro.innerHTML = '';
+      contenedorOtro.classList.toggle('hidden-el', tipo !== 'otro');
+
+      document.getElementById('modalEquipo').classList.remove('hidden-el');
+      document.getElementById('modalEquipo').classList.add('flex');
+    }
+
+    function agregarCampoOtro() {
+      contadorCamposOtro++;
+      const id = 'campoOtro_' + contadorCamposOtro;
+      const div = document.createElement('div');
+      div.className = 'flex gap-2';
+      div.innerHTML = `
+        <input type="text" placeholder="Nombre del campo (ej. Detalle)" class="otro-campo-label" style="flex:1;">
+        <input type="text" placeholder="Valor" class="otro-campo-valor" style="flex:1;">
+      `;
+      document.getElementById('listaCamposOtro').appendChild(div);
+    }
+
+    function cerrarModalEquipo() {
+      document.getElementById('modalEquipo').classList.add('hidden-el');
+      document.getElementById('modalEquipo').classList.remove('flex');
+      document.getElementById('formEquipo').reset();
+    }
+
+    document.getElementById('formEquipo').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const fd = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      const config = CAMPOS_POR_TIPO[tipoEquipoActual];
+      const datosEspecificos = {};
+      config.campos.forEach(c => {
+        const valor = fd.get('campo_' + c.key);
+        if (valor) datosEspecificos[c.key] = valor;
+      });
+
+      // Campos personalizados del tipo "Otro"
+      if (tipoEquipoActual === 'otro') {
+        const labels = document.querySelectorAll('.otro-campo-label');
+        const valores = document.querySelectorAll('.otro-campo-valor');
+        const camposCustom = [];
+        labels.forEach((el, i) => {
+          if (el.value.trim()) camposCustom.push({ label: el.value.trim(), valor: valores[i].value.trim() });
+        });
+        if (camposCustom.length > 0) datosEspecificos.camposCustom = camposCustom;
+      }
+
+      const resultado = await agregarEquipo({
+        nombre: datosEspecificos.nombre || '',
+        ubicacion: datosEspecificos.ubicacion || '',
+        proximoMantenimiento: fd.get('proximoMantenimiento'),
+        tipo: tipoEquipoActual,
+        datosEspecificos
+      });
+
+      submitBtn.disabled = false;
+      if (!resultado.ok) { alert('Error al guardar el equipo.'); return; }
+
+      equipoSeleccionadoId = resultado.id;
+      cerrarModalEquipo();
+      renderListaEquipos();
+    });
+
+    // ---- Listado y detalle (global, no depende de proveedor) ----
     async function renderListaEquipos() {
-      const proveedores = await getProveedores();
-      const proveedor = proveedores.find(p => String(p.id) === String(proveedorId));
-      document.getElementById('tituloProveedor').textContent = `Equipos · ${proveedor ? proveedor.razonSocial : ''}`;
-
-      equiposCache = await getEquipos(proveedorId);
+      equiposCache = await getEquipos();
       const container = document.getElementById('listaEquipos');
 
       if (equiposCache.length === 0) {
@@ -120,11 +287,16 @@
 
       if (!equipoSeleccionadoId) equipoSeleccionadoId = equiposCache[0].id;
 
+      const iconoPorTipo = { ac: 'fa-fan', montacargas: 'fa-truck-ramp-box', computadora: 'fa-computer', otro: 'fa-cube' };
+
       container.innerHTML = equiposCache.map(e => `
-        <div onclick="seleccionarEquipo('${e.id}')" class="p-3 rounded-xl mb-1 cursor-pointer"
+        <div onclick="seleccionarEquipo('${e.id}')" class="p-3 rounded-xl mb-1 cursor-pointer flex items-center gap-2"
              style="${String(e.id) === String(equipoSeleccionadoId) ? 'background:var(--accent);color:white;' : ''}">
-          <p class="text-sm font-medium">${e.nombre}</p>
-          <p class="text-xs ${String(e.id) === String(equipoSeleccionadoId) ? 'opacity-80' : 'text-[var(--text-muted)]'}">${e.ubicacion}</p>
+          <i class="fa-solid ${iconoPorTipo[e.tipo] || 'fa-cube'}"></i>
+          <div>
+            <p class="text-sm font-medium">${e.nombre}</p>
+            <p class="text-xs ${String(e.id) === String(equipoSeleccionadoId) ? 'opacity-80' : 'text-[var(--text-muted)]'}">${e.ubicacion}</p>
+          </div>
         </div>
       `).join('');
 
@@ -149,13 +321,24 @@
       mantenimientosCache = (await getMantenimientos(equipo.id))
         .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
+      // Muestra los datos específicos del tipo de equipo (marca, modelo, btu, etc.)
+      const datosExtra = Object.entries(equipo.datosEspecificos || {})
+        .filter(([k]) => k !== 'nombre' && k !== 'ubicacion' && k !== 'camposCustom')
+        .map(([k, v]) => `<span class="text-xs text-[var(--text-secondary)] mr-3">${k}: <strong>${v}</strong></span>`)
+        .join('');
+
+      const camposCustom = (equipo.datosEspecificos?.camposCustom || [])
+        .map(c => `<span class="text-xs text-[var(--text-secondary)] mr-3">${c.label}: <strong>${c.valor}</strong></span>`)
+        .join('');
+
       detalle.innerHTML = `
         <div class="flex justify-between items-start mb-4">
           <div>
             <h2 class="title-font text-lg font-medium">${equipo.nombre}</h2>
-            <p class="text-sm text-[var(--text-secondary)]">${equipo.ubicacion} · Serie ${equipo.serie || 'N/A'} · Próx: ${equipo.proximoMantenimiento || 'sin definir'}</p>
+            <p class="text-sm text-[var(--text-secondary)] mb-1">${equipo.ubicacion} · Próx: ${equipo.proximoMantenimiento || 'sin definir'}</p>
+            <div>${datosExtra}${camposCustom}</div>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-shrink-0">
             <button onclick="abrirModalMantenimiento()" class="btn-secondary text-sm py-2 px-4">+ Agregar mantenimiento</button>
             <button onclick="abrirModalSubirPdf()" class="btn-secondary text-sm py-2 px-4">Subir mantenimiento PDF</button>
           </div>
@@ -175,30 +358,6 @@
         </div>
       `;
     }
-
-    // ---- Modal equipo ----
-    function abrirModalEquipo() { document.getElementById('modalEquipo').classList.remove('hidden-el'); document.getElementById('modalEquipo').classList.add('flex'); }
-    function cerrarModalEquipo() { document.getElementById('modalEquipo').classList.add('hidden-el'); document.getElementById('modalEquipo').classList.remove('flex'); document.getElementById('formEquipo').reset(); }
-
-    document.getElementById('formEquipo').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const fd = new FormData(this);
-      const submitBtn = this.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-
-      const resultado = await agregarEquipo({
-        proveedorId,
-        nombre: fd.get('nombre'), ubicacion: fd.get('ubicacion'),
-        serie: fd.get('serie'), proximoMantenimiento: fd.get('proximoMantenimiento')
-      });
-
-      submitBtn.disabled = false;
-      if (!resultado.ok) { alert('Error al guardar el equipo.'); return; }
-
-      equipoSeleccionadoId = resultado.id;
-      cerrarModalEquipo();
-      renderListaEquipos();
-    });
 
     // ---- Modal mantenimiento manual ----
     function abrirModalMantenimiento() { document.getElementById('modalMantenimiento').classList.remove('hidden-el'); document.getElementById('modalMantenimiento').classList.add('flex'); }
