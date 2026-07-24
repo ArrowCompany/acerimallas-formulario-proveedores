@@ -79,23 +79,48 @@
   <!-- MODAL: Agregar mantenimiento -->
   <div id="modalMantenimiento" class="fixed inset-0 bg-black/40 hidden-el items-center justify-center z-50 p-6 overflow-y-auto">
     <div class="card p-8 max-w-lg w-full my-8">
-      <h2 class="title-font text-xl mb-4">Agregar mantenimiento</h2>
+      <h2 class="title-font text-xl mb-4">Nueva visita</h2>
       <form id="formMantenimiento" class="space-y-4">
+
+        <p class="text-xs text-[var(--text-secondary)] font-medium">Información</p>
         <input type="date" name="fecha" required>
         <input type="text" name="tipo" placeholder="Tipo de servicio *" required>
-        <textarea name="observacion" placeholder="Observación (lo que tenía el equipo)" rows="2"></textarea>
-        <textarea name="detalle" placeholder="Detalle de lo que se resolvió" rows="2" required></textarea>
+
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Detalle del equipo</p>
+        <textarea name="observacion" placeholder="¿Qué tenía? Estado del equipo..." rows="2"></textarea>
+
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Observación</p>
+        <textarea name="detalle" placeholder="¿Qué se resolvió? Trabajo realizado..." rows="2" required></textarea>
+
         <div>
-          <label class="block text-sm text-[var(--text-secondary)] mb-2">Fotos</label>
-          <input type="file" name="fotos" accept="image/*" multiple>
+          <p class="text-xs text-[var(--text-secondary)] font-medium mb-2">Fotos</p>
+          <label style="display:flex;align-items:center;justify-content:center;height:64px;border:1.5px dashed var(--border);border-radius:12px;cursor:pointer;font-size:22px;color:var(--text-muted);">
+            +
+            <input type="file" name="fotos" accept="image/*" multiple class="hidden" onchange="mostrarNombresFotos(this)">
+          </label>
+          <p id="nombresFotos" class="text-xs text-[var(--text-muted)] mt-1"></p>
         </div>
-        <div>
-          <label class="block text-sm text-[var(--text-secondary)] mb-2">Firma</label>
-          <input type="file" name="firma" accept="image/*">
+
+        <label class="flex items-start gap-2 p-3 rounded-xl" style="background:var(--bg-warning);">
+          <input type="checkbox" name="aceptaCondiciones" class="w-auto mt-1" required>
+          <span class="text-xs" style="color:var(--text-warning);">Acepto que fui informado sobre las condiciones y riesgos del servicio, asumiendo la total responsabilidad como cliente.</span>
+        </label>
+
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Modo de pago</p>
+        <div class="flex gap-6">
+          <label class="flex items-center gap-2 text-sm"><input type="radio" name="modoPago" value="Transferencia" class="w-auto"> Transferencia</label>
+          <label class="flex items-center gap-2 text-sm"><input type="radio" name="modoPago" value="Efectivo" class="w-auto"> Efectivo</label>
         </div>
+        <input type="number" name="costo" placeholder="$ 0.00" step="0.01" min="0">
+
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-2">Firma del cliente</p>
+        <p class="text-xs text-[var(--text-muted)] mb-1">El cliente firma con el dedo:</p>
+        <canvas id="canvasFirma" width="400" height="150" style="width:100%;height:150px;border:1px solid var(--border);border-radius:12px;touch-action:none;background:var(--surface-2);"></canvas>
+        <button type="button" onclick="limpiarFirma()" class="text-xs" style="color:var(--text-secondary);background:none;border:none;padding:4px 0;width:auto;height:auto;">🗑 Limpiar firma</button>
+
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="cerrarModalMantenimiento()" class="btn-secondary flex-1">Cancelar</button>
-          <button type="submit" class="btn-primary flex-1">Guardar servicio</button>
+          <button type="submit" class="btn-primary flex-1">Guardar visita</button>
         </div>
         <p class="text-xs text-[var(--text-muted)] text-center">Al guardar se genera automáticamente un PDF con estos datos, fotos y firma.</p>
       </form>
@@ -359,14 +384,73 @@
       `;
     }
 
-    // ---- Modal mantenimiento manual ----
-    function abrirModalMantenimiento() { document.getElementById('modalMantenimiento').classList.remove('hidden-el'); document.getElementById('modalMantenimiento').classList.add('flex'); }
-    function cerrarModalMantenimiento() { document.getElementById('modalMantenimiento').classList.add('hidden-el'); document.getElementById('modalMantenimiento').classList.remove('flex'); document.getElementById('formMantenimiento').reset(); }
+    // ---- Modal mantenimiento manual (Nueva visita) ----
+    let dibujando = false;
+    let canvasFirma, ctxFirma;
+
+    function inicializarCanvasFirma() {
+      canvasFirma = document.getElementById('canvasFirma');
+      ctxFirma = canvasFirma.getContext('2d');
+      ctxFirma.strokeStyle = '#1F1E1B';
+      ctxFirma.lineWidth = 2;
+      ctxFirma.lineCap = 'round';
+
+      function coordenadas(e) {
+        const rect = canvasFirma.getBoundingClientRect();
+        const escalaX = canvasFirma.width / rect.width;
+        const escalaY = canvasFirma.height / rect.height;
+        const punto = e.touches ? e.touches[0] : e;
+        return { x: (punto.clientX - rect.left) * escalaX, y: (punto.clientY - rect.top) * escalaY };
+      }
+
+      function iniciar(e) { dibujando = true; const p = coordenadas(e); ctxFirma.beginPath(); ctxFirma.moveTo(p.x, p.y); e.preventDefault(); }
+      function mover(e) { if (!dibujando) return; const p = coordenadas(e); ctxFirma.lineTo(p.x, p.y); ctxFirma.stroke(); e.preventDefault(); }
+      function terminar() { dibujando = false; }
+
+      canvasFirma.addEventListener('mousedown', iniciar);
+      canvasFirma.addEventListener('mousemove', mover);
+      canvasFirma.addEventListener('mouseup', terminar);
+      canvasFirma.addEventListener('mouseleave', terminar);
+      canvasFirma.addEventListener('touchstart', iniciar);
+      canvasFirma.addEventListener('touchmove', mover);
+      canvasFirma.addEventListener('touchend', terminar);
+    }
+
+    function limpiarFirma() {
+      ctxFirma.clearRect(0, 0, canvasFirma.width, canvasFirma.height);
+    }
+
+    function mostrarNombresFotos(input) {
+      const nombres = Array.from(input.files).map(f => f.name).join(', ');
+      document.getElementById('nombresFotos').textContent = nombres;
+    }
+
+    function abrirModalMantenimiento() {
+      document.getElementById('modalMantenimiento').classList.remove('hidden-el');
+      document.getElementById('modalMantenimiento').classList.add('flex');
+      if (!canvasFirma) inicializarCanvasFirma();
+      setTimeout(limpiarFirma, 0);
+    }
+    function cerrarModalMantenimiento() {
+      document.getElementById('modalMantenimiento').classList.add('hidden-el');
+      document.getElementById('modalMantenimiento').classList.remove('flex');
+      document.getElementById('formMantenimiento').reset();
+      document.getElementById('nombresFotos').textContent = '';
+      if (ctxFirma) limpiarFirma();
+    }
 
     document.getElementById('formMantenimiento').addEventListener('submit', async function(e) {
       e.preventDefault();
       const fd = new FormData(this);
       const submitBtn = this.querySelector('button[type="submit"]');
+
+      // Verifica que sí haya una firma dibujada (canvas no vacío)
+      const canvasVacio = !ctxFirma.getImageData(0, 0, canvasFirma.width, canvasFirma.height).data.some(v => v !== 0);
+      if (canvasVacio) {
+        alert('Falta la firma del cliente.');
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando y generando PDF...';
 
@@ -376,25 +460,27 @@
         const encoded = await archivoABase64(foto);
         if (encoded) fotosBase64.push(encoded.base64);
       }
-      const firmaFile = fd.get('firma');
-      const firmaEncoded = firmaFile && firmaFile.size > 0 ? await archivoABase64(firmaFile) : null;
+
+      // La firma sale del canvas dibujado en pantalla (no de un archivo)
+      const firmaBase64 = canvasFirma.toDataURL('image/png').split(',')[1];
 
       const resultado = await agregarMantenimiento({
         equipoId: equipoSeleccionadoId,
         fecha: fd.get('fecha'), tipo: fd.get('tipo'),
         observacion: fd.get('observacion'), detalle: fd.get('detalle'),
-        fotosBase64, firmaBase64: firmaEncoded ? firmaEncoded.base64 : null,
+        modoPago: fd.get('modoPago'), costo: fd.get('costo'),
+        fotosBase64, firmaBase64,
         origen: 'manual'
       });
 
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Guardar servicio';
+      submitBtn.textContent = 'Guardar visita';
 
       if (!resultado.ok) { alert('Error al guardar el mantenimiento.'); return; }
 
       cerrarModalMantenimiento();
       renderDetalleEquipo();
-      alert('Servicio guardado. El PDF se generó con los datos, fotos y firma ingresados.');
+      alert('Visita guardada. El PDF se generó con los datos, fotos y firma ingresados.');
     });
 
     // ---- Modal subir PDF externo ----

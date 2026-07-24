@@ -17,8 +17,8 @@
   <div class="max-w-4xl mx-auto px-6">
     <div class="card p-10">
       <div class="text-center mb-10">
-        <h1 class="title-font text-4xl font-semibold" style="color:var(--accent)">Acerimallas S.A.</h1>
-        <p class="text-xl mt-2 text-[var(--text-secondary)]">Registro de Proveedores 2026</p>
+        <h1 id="tituloFormulario" class="title-font text-4xl font-semibold" style="color:var(--accent)">Acerimallas S.A.</h1>
+        <p id="subtituloFormulario" class="text-xl mt-2 text-[var(--text-secondary)]">Registro de Proveedores 2026</p>
         <p class="text-sm mt-4 text-[var(--text-muted)] max-w-2xl mx-auto">
           En cumplimiento con la Ley Orgánica de Protección de Datos Personales, el titular brinda su consentimiento
           expreso para el tratamiento de sus datos personales, exclusivo para fines de la relación contractual como
@@ -347,6 +347,92 @@
       return !faltaAlguno;
     }
 
+    // ---- Modo corrección: cuando el proveedor llega con ?token=... ----
+    const ALIAS_CAMPOS = { certificadoBancario: 'archivoCertBancario' };
+    let modoCorreccion = false;
+    let tokenActual = null;
+
+    async function iniciarModoCorreccion(token) {
+      const proveedor = await getProveedorPorToken(token);
+      if (!proveedor) {
+        alert('Este link no es válido o ya expiró. Contacte a Acerimallas para obtener uno nuevo.');
+        return;
+      }
+      modoCorreccion = true;
+      tokenActual = token;
+
+      // Desbloquea el formulario de inmediato (ya sabemos que es una corrección)
+      document.getElementById('inputCorreo').value = proveedor.correoRetenciones || '';
+      const fieldset = document.getElementById('camposCondicionales');
+      fieldset.disabled = false;
+      fieldset.style.opacity = '1';
+
+      // Prellenar campos simples de texto
+      ['razonSocial','nombreComercial','ruc','telefono1','telefono2','ciudad','provincia',
+       'correoRetenciones','direccion','representanteLegal','contacto1','contacto2',
+       'entidadBancaria','tipoCuenta','numeroCuenta','titularCuenta'].forEach(nombre => {
+        const el = document.querySelector(`[name="${nombre}"]`);
+        if (el && proveedor[nombre]) el.value = proveedor[nombre];
+      });
+
+      // Radios
+      if (proveedor.tipoProveedor) {
+        const radio = document.querySelector(`input[name="tipoProveedor"][value="${proveedor.tipoProveedor}"]`);
+        if (radio) { radio.checked = true; actualizarTipoProveedor(); }
+      }
+      if (proveedor.formaPago) {
+        const radioPago = document.querySelector(`input[name="formaPago"][value="${proveedor.formaPago}"]`);
+        if (radioPago) radioPago.checked = true;
+      }
+
+      // Checkboxes de área
+      if (proveedor.area) {
+        const areas = String(proveedor.area).split(',').map(s => s.trim());
+        document.querySelectorAll('input[name="area"]').forEach(cb => {
+          if (areas.includes(cb.value)) cb.checked = true;
+        });
+      }
+
+      // Archivos ya subidos: solo son obligatorios de nuevo si están marcados con error
+      const camposArchivo = ['archivoRuc', 'archivoRepLegal', 'archivoNombramiento', 'archivoCertBancario'];
+      camposArchivo.forEach(nombre => {
+        const input = document.querySelector(`[name="${nombre}"]`);
+        if (!input) return;
+        const claveOriginal = nombre === 'archivoCertBancario' ? 'certificadoBancario' : nombre;
+        const tieneError = proveedor.camposConError.includes(claveOriginal);
+        const yaExiste = proveedor[claveOriginal] || proveedor[nombre];
+        if (yaExiste && !tieneError) {
+          input.removeAttribute('required');
+          const nota = document.createElement('p');
+          nota.className = 'text-xs mt-1';
+          nota.style.color = 'var(--accent)';
+          nota.innerHTML = `<a href="${yaExiste}" target="_blank" style="text-decoration:underline;">Ver PDF ya subido</a> · solo suba uno nuevo si necesita reemplazarlo`;
+          input.parentElement.appendChild(nota);
+        }
+      });
+
+      // Resaltar en rojo únicamente los campos que la secretaria marcó con error
+      proveedor.camposConError.forEach(campo => {
+        const nombreReal = ALIAS_CAMPOS[campo] || campo;
+        const seccion = document.querySelector(`[name="${nombreReal}"]`)?.closest('section');
+        if (seccion) {
+          seccion.style.border = '2px solid var(--danger)';
+          seccion.style.borderRadius = '10px';
+          seccion.style.padding = '10px';
+        }
+      });
+
+      // Cambia los textos para indicar que es una corrección
+      document.getElementById('tituloFormulario').textContent = 'Corrección de datos';
+      document.getElementById('subtituloFormulario').textContent = 'Corrija los campos marcados en rojo y envíe de nuevo';
+      document.querySelector('button[type="submit"]').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar corrección';
+    }
+
+    const tokenDeUrl = new URLSearchParams(window.location.search).get('token');
+    if (tokenDeUrl) {
+      document.addEventListener('DOMContentLoaded', () => iniciarModoCorreccion(tokenDeUrl));
+    }
+
     document.getElementById('providerForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
@@ -407,10 +493,12 @@
         area: fd.getAll('area')
       };
 
-      const resultado = await guardarProveedor(datos);
+      const resultado = modoCorreccion
+        ? await actualizarProveedorPorToken(tokenActual, datos)
+        : await guardarProveedor(datos);
 
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Enviar Registro para Revisión';
+      submitBtn.textContent = modoCorreccion ? 'Enviar corrección' : 'Enviar Registro para Revisión';
 
       if (!resultado.ok) {
         alert('Ocurrió un error al enviar el registro. Intenta de nuevo.');

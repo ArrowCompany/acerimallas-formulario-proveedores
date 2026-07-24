@@ -22,6 +22,7 @@
 const SHEET_ID = '1WeNgnCUaE2Pp2H5LDNUOmMQ3lkx1YXlCmhg1eoJGpLE';
 const DRIVE_FOLDER_ID = '1Wfx7XyVZ3TjUSKiL7kLYNEi9LhHdxJ7o';
 const API_KEY = 'acerimallas-2026-x7k9m2'; // cámbiala por cualquier texto largo que tú elijas
+const FORM_URL = 'https://arrowcompany.github.io/acerimallas-formulario-proveedores/registro_proveedor.html';
 const CORREOS_EMPRESA_DEFAULT = ['arrowrelax@gmail.com']; // se puede sobreescribir desde la hoja de config
 
 function doPost(e) {
@@ -51,6 +52,9 @@ function doPost(e) {
     case 'enviarCorreoPrueba':
       resultado = enviarCorreoPrueba(body.correos);
       break;
+    case 'actualizarProveedorPorToken':
+      resultado = actualizarProveedorPorToken(body.token, body.datos);
+      break;
     default:
       resultado = { ok: false, error: 'Acción no reconocida' };
   }
@@ -77,6 +81,9 @@ function doGet(e) {
       break;
     case 'listarMantenimientos':
       resultado = listarMantenimientos(e.parameter.equipoId);
+      break;
+    case 'obtenerProveedorPorToken':
+      resultado = obtenerProveedorPorToken(e.parameter.token);
       break;
     default:
       resultado = { ok: false, error: 'Acción no reconocida' };
@@ -145,7 +152,7 @@ function actualizarEstadoProveedor(id, estado, camposConError, observacion) {
   const razonSocial = data[rowIndex][2];
   const correoProveedor = data[rowIndex][9];
   const token = data[rowIndex][colToken];
-  const linkCorreccion = `TU_URL_DEL_FORMULARIO_PUBLICADO?token=${token}`;
+  const linkCorreccion = `${FORM_URL}?token=${token}`;
 
   if (estado === 'no-verificado') {
     const mensajeObservacion = observacion ? `\n${observacion}\n` : '';
@@ -172,6 +179,62 @@ function listarProveedores() {
   const data = sheet.getDataRange().getValues();
   data.shift(); // quita encabezados
   return { ok: true, proveedores: data };
+}
+
+// Usado por el formulario público cuando el proveedor abre el link de corrección
+function obtenerProveedorPorToken(token) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  const fila = data.find(row => row[26] === token);
+  if (!fila) return { ok: false, error: 'Link no válido o expirado' };
+  return { ok: true, proveedor: fila };
+}
+
+// Guarda la corrección del proveedor sobre su mismo registro (no crea uno nuevo)
+function actualizarProveedorPorToken(token, datos) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[26] === token);
+  if (rowIndex === -1) return { ok: false, error: 'Link no válido o expirado' };
+
+  const filaActual = data[rowIndex];
+
+  const archivos = {};
+  ['archivoRuc', 'archivoRepLegal', 'archivoNombramiento', 'archivoCertBancario'].forEach(campo => {
+    if (datos[campo] && datos[campo].base64) {
+      archivos[campo] = subirArchivoADrive(datos[campo], `${campo}_${datos.razonSocial}`);
+    }
+  });
+
+  const nuevaFila = [
+    filaActual[0], filaActual[1], datos.razonSocial, datos.nombreComercial, datos.ruc,
+    datos.telefono1, datos.telefono2, datos.ciudad, datos.provincia, datos.correoRetenciones,
+    datos.direccion, datos.representanteLegal, datos.contacto1, datos.contacto2, datos.formaPago,
+    datos.entidadBancaria, datos.tipoCuenta, datos.numeroCuenta, datos.titularCuenta,
+    archivos.archivoRuc || filaActual[19],
+    archivos.archivoRepLegal || filaActual[20],
+    archivos.archivoNombramiento || filaActual[21],
+    archivos.archivoCertBancario || filaActual[22],
+    (datos.area || []).join(', '),
+    'no-verificado', // vuelve a quedar pendiente de revisión
+    '', // se limpian los campos con error ya corregidos
+    token, // conserva el mismo link para el proveedor
+    '' // se limpia la observación anterior
+  ];
+
+  sheet.getRange(rowIndex + 1, 1, 1, nuevaFila.length).setValues([nuevaFila]);
+
+  const correos = obtenerCorreosAlerta();
+  if (correos.length > 0) {
+    MailApp.sendEmail({
+      to: correos.join(','),
+      subject: 'Proveedor corrigió sus datos - ' + datos.razonSocial,
+      body: `El proveedor ${datos.razonSocial} corrigió su información. Por favor verificar nuevamente.`
+    });
+  }
+  registrarAlerta(`Proveedor ${datos.razonSocial} corrigió sus datos, por favor verificar.`, 'info');
+
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------
@@ -214,7 +277,10 @@ function agregarMantenimiento(datos) {
     pdfUrl = generarPdfMantenimiento(datos);
   }
 
-  sheet.appendRow([id, datos.equipoId, datos.fecha, datos.tipo, datos.observacion || '', datos.detalle || '', pdfUrl, datos.origen]);
+  sheet.appendRow([
+    id, datos.equipoId, datos.fecha, datos.tipo, datos.observacion || '', datos.detalle || '',
+    pdfUrl, datos.origen, datos.modoPago || '', datos.costo || ''
+  ]);
   return { ok: true, id, pdfUrl };
 }
 
@@ -226,29 +292,46 @@ function listarMantenimientos(equipoId) {
   return { ok: true, mantenimientos: filtrados };
 }
 
-// Genera un PDF simple con los datos del mantenimiento (fotos y firma se
-// insertan como imágenes). Para un diseño más elaborado, usar una
-// plantilla de Google Docs y reemplazar marcadores con DocumentApp.
+// Genera el PDF del mantenimiento con la misma estructura del reporte de
+// referencia: encabezado, sección de servicio, diagnóstico, trabajo
+// realizado, evidencias fotográficas y firma.
 function generarPdfMantenimiento(datos) {
   const doc = DocumentApp.create(`Mantenimiento_${datos.tipo}_${datos.fecha}`);
   const body = doc.getBody();
-  body.appendParagraph('Reporte de Mantenimiento').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+
+  body.appendParagraph('Acerimallas - Mantenimiento de Equipos').setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  body.appendParagraph('Reporte de visita técnica').setItalic(true);
+  body.appendParagraph(`Generado: ${new Date().toLocaleString('es-EC')}`).setFontSize(9);
+  body.appendParagraph('');
+
+  body.appendParagraph('SERVICIO').setHeading(DocumentApp.ParagraphHeading.HEADING3);
+  body.appendParagraph(`Tipo: ${datos.tipo}`);
   body.appendParagraph(`Fecha: ${datos.fecha}`);
-  body.appendParagraph(`Tipo de servicio: ${datos.tipo}`);
-  body.appendParagraph(`Observación: ${datos.observacion || '-'}`);
-  body.appendParagraph(`Detalle de lo resuelto: ${datos.detalle || '-'}`);
+  body.appendParagraph(`Modo de pago: ${datos.modoPago || 'No aplica'}`);
+  body.appendParagraph(`Costo: $${datos.costo || '0.00'}`);
+  body.appendParagraph('');
+
+  body.appendParagraph('DIAGNÓSTICO / ESTADO INICIAL').setHeading(DocumentApp.ParagraphHeading.HEADING3);
+  body.appendParagraph(datos.observacion || 'No especificado');
+  body.appendParagraph('');
+
+  body.appendParagraph('TRABAJO REALIZADO').setHeading(DocumentApp.ParagraphHeading.HEADING3);
+  body.appendParagraph(datos.detalle || 'No especificado');
+  body.appendParagraph('');
 
   if (datos.fotosBase64 && datos.fotosBase64.length) {
-    body.appendParagraph('Fotos:');
+    body.appendParagraph('EVIDENCIAS FOTOGRÁFICAS').setHeading(DocumentApp.ParagraphHeading.HEADING3);
     datos.fotosBase64.forEach(fotoB64 => {
       const blob = Utilities.newBlob(Utilities.base64Decode(fotoB64), 'image/png', 'foto.png');
-      body.appendImage(blob);
+      body.appendImage(blob).setWidth(300);
     });
+    body.appendParagraph('');
   }
+
   if (datos.firmaBase64) {
-    body.appendParagraph('Firma:');
+    body.appendParagraph('FIRMA DEL CLIENTE').setHeading(DocumentApp.ParagraphHeading.HEADING3);
     const blob = Utilities.newBlob(Utilities.base64Decode(datos.firmaBase64), 'image/png', 'firma.png');
-    body.appendImage(blob);
+    body.appendImage(blob).setWidth(200);
   }
 
   doc.saveAndClose();
