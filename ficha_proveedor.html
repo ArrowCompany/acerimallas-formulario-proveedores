@@ -85,6 +85,9 @@
           <div>
             <h1 class="title-font text-2xl font-semibold">${p.razonSocial}</h1>
             <div class="mt-2">${badgeFor(p.estado)}</div>
+            <p class="text-sm text-[var(--text-secondary)] mt-2">
+              <i class="fa-solid fa-envelope"></i> Correo de registro: <strong>${p.correoRegistro || p.correoRetenciones || 'no registrado'}</strong>
+            </p>
           </div>
           <button onclick="borrarProveedorActual()" class="btn-danger flex items-center gap-2 text-sm py-2 px-4">
             <i class="fa-solid fa-trash"></i> Borrar

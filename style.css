@@ -191,6 +191,21 @@ input.input-error, select.input-error {
   color: #FCA5A5;
 }
 
+.status-corregido {
+  background: #DBEAFE;
+  color: #1E40AF;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dark .status-corregido {
+  background: #1E3A8A;
+  color: #93C5FD;
+}
+
 .campo-obligatorio {
   background: rgba(43, 95, 82, 0.06);
   border-left: 3px solid var(--accent);

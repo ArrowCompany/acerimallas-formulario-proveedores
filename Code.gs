@@ -95,6 +95,9 @@ function doPost(e) {
     case 'recuperarProveedor':
       resultado = recuperarProveedor(body.id);
       break;
+    case 'marcarAlertasLeidas':
+      resultado = marcarAlertasLeidas();
+      break;
     case 'agregarMantenimiento':
       resultado = agregarMantenimiento(body.datos);
       break;
@@ -137,6 +140,9 @@ function doGet(e) {
     case 'listarProveedoresEliminados':
       resultado = listarProveedoresEliminados();
       break;
+    case 'listarAlertas':
+      resultado = listarAlertas();
+      break;
     case 'listarMantenimientos':
       resultado = listarMantenimientos(e.parameter.equipoId);
       break;
@@ -175,7 +181,8 @@ function guardarProveedor(datos) {
     datos.tipoCuenta, datos.numeroCuenta, datos.titularCuenta,
     archivos.archivoRuc || '', archivos.archivoRepLegal || '',
     archivos.archivoNombramiento || '', archivos.archivoCertBancario || '',
-    (datos.area || []).join(', '), 'no-verificado', '', linkToken, '', false
+    (datos.area || []).join(', '), 'no-verificado', '', linkToken, '', false,
+    datos.correo || '' // correo de registro (campo 1) — es el correo de contacto real
   ]);
 
   // Alerta a la empresa: nuevo proveedor
@@ -211,7 +218,7 @@ function actualizarEstadoProveedor(id, estado, camposConError, observacion) {
   const razonSocial = data[rowIndex][2];
   const nombreComercial = data[rowIndex][3];
   const nombreParaAviso = nombreProveedor(nombreComercial, razonSocial);
-  const correoProveedor = data[rowIndex][9];
+  const correoProveedor = data[rowIndex][29] || data[rowIndex][9];
   const token = data[rowIndex][colToken];
   const linkCorreccion = `${FORM_URL}?token=${token}`;
 
@@ -320,7 +327,8 @@ function actualizarProveedorPorToken(token, datos) {
     '', // se limpian los campos con error ya corregidos
     token, // conserva el mismo link para el proveedor
     '', // se limpia la observación anterior
-    filaActual[28] // conserva el estado de eliminado tal cual estaba
+    filaActual[28], // conserva el estado de eliminado tal cual estaba
+    datos.correo || filaActual[29] // correo de registro (puede confirmarlo o dejarlo igual)
   ];
 
   sheet.getRange(rowIndex + 1, 1, 1, nuevaFila.length).setValues([nuevaFila]);
@@ -610,7 +618,29 @@ function obtenerCorreosAlerta() {
 
 function registrarAlerta(mensaje, tipo) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Log_Alertas');
-  sheet.appendRow([new Date(), mensaje, tipo]);
+  sheet.appendRow([Utilities.getUuid(), new Date(), mensaje, tipo, false]);
+}
+
+// Devuelve las últimas 50 alertas, más nuevas primero
+function listarAlertas() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Log_Alertas');
+  const data = sheet.getDataRange().getValues();
+  data.shift(); // encabezados
+  const alertas = data
+    .map(row => ({ id: row[0], fecha: row[1], mensaje: row[2], tipo: row[3], leida: row[4] === true }))
+    .reverse()
+    .slice(0, 50);
+  return { ok: true, alertas };
+}
+
+// Marca como leídas todas las alertas (se llama al abrir el panel de la campana)
+function marcarAlertasLeidas() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Log_Alertas');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][4] !== true) sheet.getRange(i + 1, 5).setValue(true);
+  }
+  return { ok: true };
 }
 
 function enviarCorreoPrueba(correos) {

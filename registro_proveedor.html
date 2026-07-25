@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
 <body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-12">
-  <div class="max-w-4xl mx-auto px-6">
+  <div class="max-w-5xl mx-auto px-8">
     <div class="card p-10">
       <div class="text-center mb-10">
         <h1 id="tituloFormulario" class="title-font text-4xl font-semibold" style="color:var(--accent)">Acerimallas S.A.</h1>
@@ -32,13 +32,13 @@
         </p>
       </div>
 
-      <form id="providerForm" class="space-y-10" novalidate>
+      <form id="providerForm" class="space-y-12" novalidate>
 
         <!-- 1. Correo -->
         <section id="campo-1">
           <label class="block font-medium mb-2">1. Correo electrónico *</label>
           <input type="email" name="correo" id="inputCorreo" required>
-          <p class="text-xs text-[var(--text-muted)] mt-2">Ingrese su correo para habilitar el resto del formulario.</p>
+          <p class="text-xs text-[var(--text-muted)] mt-2">Por favor agregue un correo habilitado para que podamos responder su verificación. Para continuar, agregue el correo.</p>
         </section>
 
         <fieldset id="camposCondicionales" style="opacity:0.4;" disabled>
@@ -59,7 +59,7 @@
           <input type="text" name="otrosEspecificar">
         </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- 4. Razón social -->
           <section id="campo-4">
             <label class="block font-medium mb-2">4. Razón social *</label>
@@ -128,7 +128,7 @@
           <input type="text" name="representanteLegal" placeholder="Nombre completo, cédula, correo">
         </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- 15. Documento representante -->
           <section id="campo-15">
             <label class="block font-medium mb-2">15. Adjuntar documento del representante legal (cédula y certificado de votación)</label>
@@ -145,7 +145,7 @@
         </div>
 
         <!-- 17-18. Contactos adicionales -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <section id="campo-17">
             <label class="block font-medium mb-2">17. Contacto adicional 1 (nombre, teléfono, email) *</label>
             <input type="text" name="contacto1" required>
@@ -168,7 +168,7 @@
         <!-- 20. Datos bancarios -->
         <section id="campo-20">
           <label class="block font-medium mb-3">20. Datos bancarios</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <input type="text" name="entidadBancaria" placeholder="Entidad bancaria *" required>
             <select name="tipoCuenta" required>
               <option value="">Tipo de cuenta *</option>
@@ -190,7 +190,7 @@
         <!-- 22. Área de servicio -->
         <section id="campo-22">
           <label class="block font-medium mb-3">22. Área a la que pertenece el servicio o artículos que ofrece</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros y herramientas industriales" class="w-auto"> Suministros y herramientas industriales</label>
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros electrónicos" class="w-auto"> Suministros electrónicos</label>
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros de limpieza" class="w-auto"> Suministros de limpieza</label>
@@ -362,6 +362,8 @@
     const ALIAS_CAMPOS = { certificadoBancario: 'archivoCertBancario' };
     let modoCorreccion = false;
     let tokenActual = null;
+    let proveedorEnCorreccion = null;
+    let nombresConErrorGlobal = new Set();
 
     async function iniciarModoCorreccion(token) {
       const proveedor = await getProveedorPorToken(token);
@@ -371,9 +373,10 @@
       }
       modoCorreccion = true;
       tokenActual = token;
+      proveedorEnCorreccion = proveedor;
 
       // Desbloquea el formulario de inmediato (ya sabemos que es una corrección)
-      document.getElementById('inputCorreo').value = proveedor.correoRetenciones || '';
+      document.getElementById('inputCorreo').value = proveedor.correoRegistro || proveedor.correoRetenciones || '';
       const fieldset = document.getElementById('camposCondicionales');
       fieldset.disabled = false;
       fieldset.style.opacity = '1';
@@ -439,6 +442,7 @@
       // proveedor solo pueda tocar los que vienen marcados en rojo. Los archivos
       // ya se manejan aparte arriba (requerido solo si vienen con error).
       const nombresConError = new Set(proveedor.camposConError.map(c => ALIAS_CAMPOS[c] || c));
+      nombresConErrorGlobal = nombresConError;
       const nombresDelFormulario = new Set([...Object.values(NUMEROS_A_NOMBRES).flat(), 'tipoProveedor']);
 
       nombresDelFormulario.forEach(nombre => {
@@ -491,6 +495,25 @@
 
       const fd = new FormData(this);
 
+      // Un campo bloqueado (correcto, no editable) no viaja en el FormData —
+      // por eso, para esos casos, se usa el valor que ya estaba guardado.
+      function valor(nombre) {
+        if (modoCorreccion && proveedorEnCorreccion && !nombresConErrorGlobal.has(nombre)) {
+          const guardado = proveedorEnCorreccion[nombre];
+          return (guardado !== undefined && guardado !== null && guardado !== '') ? guardado : fd.get(nombre);
+        }
+        return fd.get(nombre);
+      }
+
+      function valoresArea() {
+        if (modoCorreccion && proveedorEnCorreccion && !nombresConErrorGlobal.has('area')) {
+          return proveedorEnCorreccion.area
+            ? String(proveedorEnCorreccion.area).split(',').map(s => s.trim()).filter(Boolean)
+            : [];
+        }
+        return fd.getAll('area');
+      }
+
       // Convierte los 4 adjuntos PDF a base64 para mandarlos al backend
       const archivoRuc = await archivoABase64(fd.get('archivoRuc'));
       const archivoRepLegal = await archivoABase64(fd.get('archivoRepLegal'));
@@ -500,29 +523,29 @@
       const datos = {
         correo: fd.get('correo'),
         tipoProveedor: fd.get('tipoProveedor'),
-        otrosEspecificar: fd.get('otrosEspecificar'),
-        razonSocial: fd.get('razonSocial'),
-        nombreComercial: fd.get('nombreComercial'),
-        ruc: fd.get('ruc'),
+        otrosEspecificar: valor('otrosEspecificar'),
+        razonSocial: valor('razonSocial'),
+        nombreComercial: valor('nombreComercial'),
+        ruc: valor('ruc'),
         archivoRuc,
-        telefono1: fd.get('telefono1'),
-        telefono2: fd.get('telefono2'),
-        ciudad: fd.get('ciudad'),
-        provincia: fd.get('provincia'),
-        correoRetenciones: fd.get('correoRetenciones'),
-        direccion: fd.get('direccion'),
-        representanteLegal: fd.get('representanteLegal'),
+        telefono1: valor('telefono1'),
+        telefono2: valor('telefono2'),
+        ciudad: valor('ciudad'),
+        provincia: valor('provincia'),
+        correoRetenciones: valor('correoRetenciones'),
+        direccion: valor('direccion'),
+        representanteLegal: valor('representanteLegal'),
         archivoRepLegal,
         archivoNombramiento,
-        contacto1: fd.get('contacto1'),
-        contacto2: fd.get('contacto2'),
-        formaPago: fd.get('formaPago'),
-        entidadBancaria: fd.get('entidadBancaria'),
-        tipoCuenta: fd.get('tipoCuenta'),
-        numeroCuenta: fd.get('numeroCuenta'),
-        titularCuenta: fd.get('titularCuenta'),
+        contacto1: valor('contacto1'),
+        contacto2: valor('contacto2'),
+        formaPago: valor('formaPago'),
+        entidadBancaria: valor('entidadBancaria'),
+        tipoCuenta: valor('tipoCuenta'),
+        numeroCuenta: valor('numeroCuenta'),
+        titularCuenta: valor('titularCuenta'),
         archivoCertBancario,
-        area: fd.getAll('area')
+        area: valoresArea()
       };
 
       const resultado = modoCorreccion
