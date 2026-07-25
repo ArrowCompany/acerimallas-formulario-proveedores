@@ -32,7 +32,7 @@
         </p>
       </div>
 
-      <form id="providerForm" class="space-y-12" novalidate>
+      <form id="providerForm" class="space-y-9" novalidate>
 
         <!-- 1. Correo -->
         <section id="campo-1">
@@ -41,7 +41,9 @@
           <p class="text-xs text-[var(--text-muted)] mt-2">Por favor agregue un correo habilitado para que podamos responder su verificación. Para continuar, agregue el correo.</p>
         </section>
 
-        <fieldset id="camposCondicionales" style="opacity:0.4;" disabled>
+        <fieldset id="camposCondicionales" class="space-y-9" style="opacity:0.4;" disabled>
+
+        <div class="divisor"><span>Datos del proveedor</span></div>
 
         <!-- 2. Tipo de proveedor -->
         <section id="campo-2">
@@ -59,68 +61,70 @@
           <input type="text" name="otrosEspecificar">
         </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- 4. Razón social -->
-          <section id="campo-4">
-            <label class="block font-medium mb-2">4. Razón social *</label>
-            <input type="text" name="razonSocial" required>
-          </section>
+        <!-- 4. Razón social -->
+        <section id="campo-4">
+          <label class="block font-medium mb-2">4. Razón social *</label>
+          <input type="text" name="razonSocial" required>
+        </section>
 
-          <!-- 5. Nombre comercial -->
-          <section id="campo-5">
-            <label class="block font-medium mb-2">5. Nombre comercial</label>
-            <input type="text" name="nombreComercial">
-          </section>
+        <!-- 5. Nombre comercial -->
+        <section id="campo-5">
+          <label class="block font-medium mb-2">5. Nombre comercial</label>
+          <input type="text" name="nombreComercial">
+        </section>
 
-          <!-- 6. RUC -->
-          <section id="campo-6">
-            <label class="block font-medium mb-2">6. Número de RUC</label>
-            <input type="text" name="ruc">
-          </section>
+        <!-- 6. RUC -->
+        <section id="campo-6">
+          <label class="block font-medium mb-2">6. Número de RUC</label>
+          <input type="text" name="ruc">
+        </section>
 
-          <!-- 7. Adjuntar RUC -->
-          <section id="campo-7">
-            <label class="block font-medium mb-2">7. Adjuntar RUC actualizado / SRI *</label>
-            <input type="file" name="archivoRuc" accept="application/pdf" required onchange="validatePdf(this)">
-            <p class="error-text" data-error-for="archivoRuc">Solo se aceptan archivos PDF.</p>
-          </section>
+        <!-- 7. Adjuntar RUC -->
+        <section id="campo-7">
+          <label class="block font-medium mb-2">7. Adjuntar RUC actualizado / SRI *</label>
+          <input type="file" name="archivoRuc" accept="application/pdf" required onchange="validatePdf(this)">
+          <p class="error-text" data-error-for="archivoRuc">Solo se aceptan archivos PDF.</p>
+        </section>
 
-          <!-- 8. Teléfono 1 -->
-          <section id="campo-8">
-            <label class="block font-medium mb-2">8. Teléfono 1 *</label>
-            <input type="tel" name="telefono1" required>
-          </section>
+        <!-- 8. Teléfono 1 -->
+        <section id="campo-8">
+          <label class="block font-medium mb-2">8. Teléfono 1 *</label>
+          <input type="tel" name="telefono1" required>
+        </section>
 
-          <!-- 9. Teléfono 2 -->
-          <section id="campo-9">
-            <label class="block font-medium mb-2">9. Teléfono 2</label>
-            <input type="tel" name="telefono2">
-          </section>
+        <!-- 9. Teléfono 2 -->
+        <section id="campo-9">
+          <label class="block font-medium mb-2">9. Teléfono 2</label>
+          <input type="tel" name="telefono2">
+        </section>
 
-          <!-- 10. Ciudad -->
-          <section id="campo-10">
-            <label class="block font-medium mb-2">10. Ciudad *</label>
-            <input type="text" name="ciudad" required>
-          </section>
+        <!-- 10. Ciudad -->
+        <section id="campo-10">
+          <label class="block font-medium mb-2">10. Ciudad *</label>
+          <input type="text" name="ciudad" required>
+        </section>
 
-          <!-- 11. Provincia -->
-          <section id="campo-11">
-            <label class="block font-medium mb-2">11. Provincia *</label>
-            <input type="text" name="provincia" required>
-          </section>
+        <!-- 11. Provincia -->
+        <section id="campo-11">
+          <label class="block font-medium mb-2">11. Provincia *</label>
+          <input type="text" name="provincia" required>
+        </section>
 
-          <!-- 12. Correo retenciones -->
-          <section id="campo-12">
-            <label class="block font-medium mb-2">12. Correo electrónico (recepción de retenciones) *</label>
-            <input type="email" name="correoRetenciones" required>
-          </section>
+        <!-- 12. Correo retenciones -->
+        <section id="campo-12">
+          <label class="block font-medium mb-2">12. Correo electrónico (recepción de retenciones) *</label>
+          <input type="email" name="correoRetenciones" required>
+        </section>
 
-          <!-- 13. Dirección -->
-          <section id="campo-13">
-            <label class="block font-medium mb-2">13. Dirección *</label>
-            <input type="text" name="direccion" required>
-          </section>
-        </div>
+        <div class="divisor"><span>Dirección</span></div>
+
+        <!-- 13. Dirección -->
+        <section id="campo-13">
+          <label class="block font-medium mb-2">13. Dirección *</label>
+          <input type="text" name="direccion" required>
+        </section>
+
+        <div class="divisor"><span>Representante legal</span></div>
 
         <!-- 14. Representante legal -->
         <section id="campo-14">
@@ -128,33 +132,35 @@
           <input type="text" name="representanteLegal" placeholder="Nombre completo, cédula, correo">
         </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <!-- 15. Documento representante -->
-          <section id="campo-15">
-            <label class="block font-medium mb-2">15. Adjuntar documento del representante legal (cédula y certificado de votación)</label>
-            <input type="file" name="archivoRepLegal" accept="application/pdf" onchange="validatePdf(this)">
-            <p class="error-text" data-error-for="archivoRepLegal">Solo se aceptan archivos PDF.</p>
-          </section>
+        <!-- 15. Documento representante -->
+        <section id="campo-15">
+          <label class="block font-medium mb-2">15. Adjuntar documento del representante legal (cédula y certificado de votación)</label>
+          <input type="file" name="archivoRepLegal" accept="application/pdf" onchange="validatePdf(this)">
+          <p class="error-text" data-error-for="archivoRepLegal">Solo se aceptan archivos PDF.</p>
+        </section>
 
-          <!-- 16. Nombramiento representante (solo Persona Jurídica) -->
-          <section id="campo-16">
-            <label class="block font-medium mb-2">16. Adjuntar nombramiento del representante legal (Persona Jurídica)</label>
-            <input type="file" name="archivoNombramiento" accept="application/pdf" onchange="validatePdf(this)">
-            <p class="error-text" data-error-for="archivoNombramiento">Solo se aceptan archivos PDF.</p>
-          </section>
-        </div>
+        <!-- 16. Nombramiento representante (solo Persona Jurídica) -->
+        <section id="campo-16">
+          <label class="block font-medium mb-2">16. Adjuntar nombramiento del representante legal (Persona Jurídica)</label>
+          <input type="file" name="archivoNombramiento" accept="application/pdf" onchange="validatePdf(this)">
+          <p class="error-text" data-error-for="archivoNombramiento">Solo se aceptan archivos PDF.</p>
+        </section>
 
-        <!-- 17-18. Contactos adicionales -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <section id="campo-17">
-            <label class="block font-medium mb-2">17. Contacto adicional 1 (nombre, teléfono, email) *</label>
-            <input type="text" name="contacto1" required>
-          </section>
-          <section id="campo-18">
-            <label class="block font-medium mb-2">18. Contacto adicional 2 (nombre, teléfono, email)</label>
-            <input type="text" name="contacto2">
-          </section>
-        </div>
+        <div class="divisor"><span>Contactos adicionales</span></div>
+
+        <!-- 17. Contacto adicional 1 -->
+        <section id="campo-17">
+          <label class="block font-medium mb-2">17. Contacto adicional 1 (nombre, teléfono, email) *</label>
+          <input type="text" name="contacto1" required>
+        </section>
+
+        <!-- 18. Contacto adicional 2 -->
+        <section id="campo-18">
+          <label class="block font-medium mb-2">18. Contacto adicional 2 (nombre, teléfono, email)</label>
+          <input type="text" name="contacto2">
+        </section>
+
+        <div class="divisor"><span>Forma de pago y datos bancarios</span></div>
 
         <!-- 19. Forma de pago -->
         <section id="campo-19">
@@ -168,7 +174,7 @@
         <!-- 20. Datos bancarios -->
         <section id="campo-20">
           <label class="block font-medium mb-3">20. Datos bancarios</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="space-y-4">
             <input type="text" name="entidadBancaria" placeholder="Entidad bancaria *" required>
             <select name="tipoCuenta" required>
               <option value="">Tipo de cuenta *</option>
@@ -187,10 +193,12 @@
           <p class="error-text" data-error-for="archivoCertBancario">Solo se aceptan archivos PDF.</p>
         </section>
 
+        <div class="divisor"><span>Área de servicio</span></div>
+
         <!-- 22. Área de servicio -->
         <section id="campo-22">
           <label class="block font-medium mb-3">22. Área a la que pertenece el servicio o artículos que ofrece</label>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="space-y-2">
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros y herramientas industriales" class="w-auto"> Suministros y herramientas industriales</label>
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros electrónicos" class="w-auto"> Suministros electrónicos</label>
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Suministros de limpieza" class="w-auto"> Suministros de limpieza</label>
@@ -201,6 +209,8 @@
             <label class="flex items-center gap-2"><input type="checkbox" name="area" value="Servicios varios" class="w-auto"> Servicios varios</label>
           </div>
         </section>
+
+        <div class="divisor"><span>Autorización y envío</span></div>
 
         <!-- 23. Política de privacidad -->
         <section class="text-sm text-[var(--text-secondary)]">
