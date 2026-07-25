@@ -25,6 +25,40 @@ const API_KEY = 'acerimallas-2026-x7k9m2'; // cámbiala por cualquier texto larg
 const FORM_URL = 'https://arrowcompany.github.io/acerimallas-formulario-proveedores/registro_proveedor.html';
 const CORREOS_EMPRESA_DEFAULT = ['arrowrelax@gmail.com']; // se puede sobreescribir desde la hoja de config
 
+// Nombre para mostrar en correos y alertas: "Nombre comercial (Razón social)"
+function nombreProveedor(nombreComercial, razonSocial) {
+  if (nombreComercial && razonSocial) return `${nombreComercial} (${razonSocial})`;
+  return nombreComercial || razonSocial || 'Proveedor';
+}
+
+// Etiquetas legibles de cada campo del formulario, para listarlas en el
+// correo de corrección (mismo orden/textos que la ficha del proveedor)
+const ETIQUETAS_CAMPOS = {
+  tipoProveedor: 'Tipo de proveedor',
+  razonSocial: 'Razón social',
+  nombreComercial: 'Nombre comercial',
+  ruc: 'RUC',
+  archivoRuc: 'RUC actualizado / SRI (PDF)',
+  telefono1: 'Teléfono 1',
+  telefono2: 'Teléfono 2',
+  ciudad: 'Ciudad',
+  provincia: 'Provincia',
+  correoRetenciones: 'Correo (retenciones)',
+  direccion: 'Dirección',
+  representanteLegal: 'Representante legal',
+  archivoRepLegal: 'Documento representante legal (PDF)',
+  archivoNombramiento: 'Nombramiento representante (PDF)',
+  contacto1: 'Contacto adicional 1',
+  contacto2: 'Contacto adicional 2',
+  formaPago: 'Forma de pago',
+  entidadBancaria: 'Entidad bancaria',
+  tipoCuenta: 'Tipo de cuenta',
+  numeroCuenta: 'Número de cuenta',
+  titularCuenta: 'Titular de la cuenta',
+  certificadoBancario: 'Certificado bancario (PDF)',
+  area: 'Área de servicio'
+};
+
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
 
@@ -45,6 +79,21 @@ function doPost(e) {
       break;
     case 'agregarEquipo':
       resultado = agregarEquipo(body.datos);
+      break;
+    case 'eliminarEquipo':
+      resultado = eliminarEquipo(body.equipoId);
+      break;
+    case 'recuperarEquipo':
+      resultado = recuperarEquipo(body.equipoId);
+      break;
+    case 'actualizarEquipo':
+      resultado = actualizarEquipo(body.equipoId, body.datos);
+      break;
+    case 'eliminarProveedor':
+      resultado = eliminarProveedor(body.id);
+      break;
+    case 'recuperarProveedor':
+      resultado = recuperarProveedor(body.id);
       break;
     case 'agregarMantenimiento':
       resultado = agregarMantenimiento(body.datos);
@@ -81,6 +130,12 @@ function doGet(e) {
       break;
     case 'listarEquipos':
       resultado = listarEquipos(e.parameter.proveedorId);
+      break;
+    case 'listarEquiposEliminados':
+      resultado = listarEquiposEliminados();
+      break;
+    case 'listarProveedoresEliminados':
+      resultado = listarProveedoresEliminados();
       break;
     case 'listarMantenimientos':
       resultado = listarMantenimientos(e.parameter.equipoId);
@@ -120,19 +175,20 @@ function guardarProveedor(datos) {
     datos.tipoCuenta, datos.numeroCuenta, datos.titularCuenta,
     archivos.archivoRuc || '', archivos.archivoRepLegal || '',
     archivos.archivoNombramiento || '', archivos.archivoCertBancario || '',
-    (datos.area || []).join(', '), 'no-verificado', '', linkToken
+    (datos.area || []).join(', '), 'no-verificado', '', linkToken, '', false
   ]);
 
   // Alerta a la empresa: nuevo proveedor
+  const nombreParaAviso = nombreProveedor(datos.nombreComercial, datos.razonSocial);
   const correos = obtenerCorreosAlerta();
   if (correos.length > 0) {
     MailApp.sendEmail({
       to: correos.join(','),
-      subject: 'Nuevo proveedor registrado - ' + datos.razonSocial,
-      body: `Se registró un nuevo proveedor: ${datos.razonSocial}.\nPor favor verificar en el sistema.`
+      subject: 'Nuevo proveedor registrado - ' + nombreParaAviso,
+      body: `Se registró un nuevo proveedor: ${nombreParaAviso}.\nPor favor verificar en el sistema.`
     });
   }
-  registrarAlerta(`Nuevo proveedor registrado: ${datos.razonSocial}`, 'info');
+  registrarAlerta(`Nuevo proveedor registrado: ${nombreParaAviso}`, 'info');
 
   return { ok: true, id, linkToken };
 }
@@ -153,25 +209,30 @@ function actualizarEstadoProveedor(id, estado, camposConError, observacion) {
   sheet.getRange(rowIndex + 1, colObservacion + 1).setValue(observacion || '');
 
   const razonSocial = data[rowIndex][2];
+  const nombreComercial = data[rowIndex][3];
+  const nombreParaAviso = nombreProveedor(nombreComercial, razonSocial);
   const correoProveedor = data[rowIndex][9];
   const token = data[rowIndex][colToken];
   const linkCorreccion = `${FORM_URL}?token=${token}`;
 
   if (estado === 'no-verificado') {
-    const mensajeObservacion = observacion ? `\n${observacion}\n` : '';
+    const listaErrores = (camposConError || [])
+      .map(c => '- ' + (ETIQUETAS_CAMPOS[c] || c))
+      .join('\n');
+    const mensajeObservacion = observacion ? `\nDetalle: ${observacion}\n` : '';
     MailApp.sendEmail({
       to: correoProveedor,
       subject: 'Corrección requerida - Registro de proveedor Acerimallas',
-      body: `Estimado proveedor,\n\nSe encontraron observaciones en su registro.${mensajeObservacion}\nPor favor ingrese al siguiente link para corregir:\n${linkCorreccion}\n\nGracias.`
+      body: `Estimado proveedor,\n\nRevisamos su registro y encontramos observaciones en los siguientes datos:\n\n${listaErrores}\n${mensajeObservacion}\nEl resto de su información ya está correcta, no es necesario volver a enviarla.\n\nPor favor ingrese al siguiente link para corregir únicamente lo señalado:\n${linkCorreccion}\n\nGracias.`
     });
-    registrarAlerta(`Proveedor ${razonSocial} marcado como no verificado.`, 'warning');
+    registrarAlerta(`Proveedor ${nombreParaAviso} marcado como no verificado.`, 'warning');
   } else if (estado === 'verificado') {
     MailApp.sendEmail({
       to: correoProveedor,
       subject: 'Registro verificado - Acerimallas',
       body: `Estimado proveedor,\n\nSu registro ha sido verificado y aprobado exitosamente.\n\nGracias.`
     });
-    registrarAlerta(`Proveedor ${razonSocial} verificado.`, 'success');
+    registrarAlerta(`Proveedor ${nombreParaAviso} verificado.`, 'success');
   }
 
   return { ok: true };
@@ -181,7 +242,43 @@ function listarProveedores() {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
   const data = sheet.getDataRange().getValues();
   data.shift(); // quita encabezados
-  return { ok: true, proveedores: data };
+  const activos = data.filter(row => row[28] !== true);
+  return { ok: true, proveedores: activos };
+}
+
+function listarProveedoresEliminados() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  data.shift();
+  const eliminados = data.filter(row => row[28] === true);
+  return { ok: true, proveedores: eliminados };
+}
+
+// Envía el proveedor a la carpeta de Eliminados (no borra sus datos ni su
+// historial, solo lo oculta de las listas normales hasta que se recupere)
+function eliminarProveedor(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Proveedor no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 29).setValue(true);
+  const nombreParaAviso = nombreProveedor(data[rowIndex][3], data[rowIndex][2]);
+  registrarAlerta(`Proveedor ${nombreParaAviso} enviado a la carpeta de eliminados.`, 'info');
+  return { ok: true };
+}
+
+// Restaura al proveedor exactamente con el estado que tenía antes de borrarlo
+function recuperarProveedor(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Proveedor no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 29).setValue(false);
+  const nombreParaAviso = nombreProveedor(data[rowIndex][3], data[rowIndex][2]);
+  registrarAlerta(`Proveedor ${nombreParaAviso} fue recuperado.`, 'success');
+  return { ok: true };
 }
 
 // Usado por el formulario público cuando el proveedor abre el link de corrección
@@ -219,23 +316,25 @@ function actualizarProveedorPorToken(token, datos) {
     archivos.archivoNombramiento || filaActual[21],
     archivos.archivoCertBancario || filaActual[22],
     (datos.area || []).join(', '),
-    'no-verificado', // vuelve a quedar pendiente de revisión
+    'corregido', // el proveedor ya reenvió su corrección, queda pendiente de re-revisión
     '', // se limpian los campos con error ya corregidos
     token, // conserva el mismo link para el proveedor
-    '' // se limpia la observación anterior
+    '', // se limpia la observación anterior
+    filaActual[28] // conserva el estado de eliminado tal cual estaba
   ];
 
   sheet.getRange(rowIndex + 1, 1, 1, nuevaFila.length).setValues([nuevaFila]);
 
+  const nombreParaAviso = nombreProveedor(datos.nombreComercial, datos.razonSocial);
   const correos = obtenerCorreosAlerta();
   if (correos.length > 0) {
     MailApp.sendEmail({
       to: correos.join(','),
-      subject: 'Proveedor corrigió sus datos - ' + datos.razonSocial,
-      body: `El proveedor ${datos.razonSocial} corrigió su información. Por favor verificar nuevamente.`
+      subject: 'Proveedor corrigió sus datos - ' + nombreParaAviso,
+      body: `El proveedor ${nombreParaAviso} corrigió su información y la reenvió. Por favor verificar nuevamente en el sistema.`
     });
   }
-  registrarAlerta(`Proveedor ${datos.razonSocial} corrigió sus datos, por favor verificar.`, 'info');
+  registrarAlerta(`El proveedor ${nombreParaAviso} ya corrigió sus datos, verificar.`, 'info');
 
   return { ok: true };
 }
@@ -254,9 +353,28 @@ function agregarEquipo(datos) {
     datos.serie || '',
     datos.proximoMantenimiento || '',
     datos.tipo || 'otro',
-    JSON.stringify(datos.datosEspecificos || {})
+    JSON.stringify(datos.datosEspecificos || {}),
+    false
   ]);
   return { ok: true, id };
+}
+
+// Reescribe los datos editables de un equipo existente (mantiene id, dueño y
+// estado de eliminado tal como estaban)
+function actualizarEquipo(id, datos) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Equipo no encontrado' };
+
+  const filaActual = data[rowIndex];
+  const nuevaFila = [
+    filaActual[0], filaActual[1], datos.nombre, datos.ubicacion, filaActual[4],
+    datos.proximoMantenimiento || '', datos.tipo || filaActual[6],
+    JSON.stringify(datos.datosEspecificos || {}), filaActual[8]
+  ];
+  sheet.getRange(rowIndex + 1, 1, 1, nuevaFila.length).setValues([nuevaFila]);
+  return { ok: true };
 }
 
 // Actualiza solo la columna "proximoMantenimiento" (col. 6) de un equipo.
@@ -284,8 +402,41 @@ function listarEquipos(proveedorId) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
   const data = sheet.getDataRange().getValues();
   data.shift();
-  const filtrados = proveedorId ? data.filter(row => row[1] === proveedorId) : data;
-  return { ok: true, equipos: filtrados };
+  let activos = data.filter(row => row[8] !== true);
+  if (proveedorId) activos = activos.filter(row => row[1] === proveedorId);
+  return { ok: true, equipos: activos };
+}
+
+function listarEquiposEliminados() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  data.shift();
+  const eliminados = data.filter(row => row[8] === true);
+  return { ok: true, equipos: eliminados };
+}
+
+// Envía el equipo a la carpeta de Eliminados (no borra su historial de
+// mantenimientos, solo lo oculta hasta que se recupere)
+function eliminarEquipo(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Equipo no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 9).setValue(true);
+  registrarAlerta(`Equipo "${data[rowIndex][2]}" enviado a la carpeta de eliminados.`, 'info');
+  return { ok: true };
+}
+
+function recuperarEquipo(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Equipos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Equipo no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 9).setValue(false);
+  registrarAlerta(`Equipo "${data[rowIndex][2]}" fue recuperado.`, 'success');
+  return { ok: true };
 }
 
 function agregarMantenimiento(datos) {

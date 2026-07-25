@@ -60,6 +60,19 @@
     </div>
 
     <div id="resultadoImportacion" class="card p-6 hidden-el"></div>
+
+    <!-- Papelera: proveedores y equipos eliminados -->
+    <div class="card p-6 mt-6">
+      <p class="font-medium mb-1">Proveedores eliminados</p>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Si borraste un proveedor por error, lo puedes recuperar aquí.</p>
+      <div id="listaProveedoresEliminados"></div>
+    </div>
+
+    <div class="card p-6 mt-6">
+      <p class="font-medium mb-1">Equipos eliminados</p>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Si borraste un equipo por error, lo puedes recuperar aquí.</p>
+      <div id="listaEquiposEliminados"></div>
+    </div>
   </div>
 
   <script src="js/store.js"></script>
@@ -152,7 +165,75 @@
       `;
     }
 
-    document.addEventListener('DOMContentLoaded', () => setTimeout(renderCorreos, 0));
+    // ---- Papelera: proveedores eliminados ----
+    async function renderProveedoresEliminados() {
+      const cont = document.getElementById('listaProveedoresEliminados');
+      cont.innerHTML = `<p class="text-sm text-[var(--text-muted)]">Cargando...</p>`;
+      const proveedores = await getProveedoresEliminados();
+
+      if (proveedores.length === 0) {
+        cont.innerHTML = `<p class="text-sm text-[var(--text-muted)] py-2">No hay proveedores eliminados.</p>`;
+        return;
+      }
+
+      cont.innerHTML = proveedores.map((p, i) => `
+        <div class="flex justify-between items-center py-2 ${i < proveedores.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+          <div>
+            <p class="text-sm font-medium">${p.razonSocial}</p>
+            <p class="text-xs text-[var(--text-muted)]">${p.nombreComercial || ''} · RUC ${p.ruc || ''}</p>
+          </div>
+          <button onclick="recuperarProveedorClick('${p.id}')" class="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
+            <i class="fa-solid fa-rotate-left"></i> Recuperar
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function recuperarProveedorClick(id) {
+      const confirmado = confirm('¿Aceptar? Este proveedor volverá a aparecer en el sistema con su estado anterior.');
+      if (!confirmado) return;
+      const resultado = await recuperarProveedor(id);
+      if (!resultado.ok) { alert('Ocurrió un error al recuperar.'); return; }
+      renderProveedoresEliminados();
+    }
+
+    // ---- Papelera: equipos eliminados ----
+    async function renderEquiposEliminados() {
+      const cont = document.getElementById('listaEquiposEliminados');
+      cont.innerHTML = `<p class="text-sm text-[var(--text-muted)]">Cargando...</p>`;
+      const equipos = await getEquiposEliminados();
+
+      if (equipos.length === 0) {
+        cont.innerHTML = `<p class="text-sm text-[var(--text-muted)] py-2">No hay equipos eliminados.</p>`;
+        return;
+      }
+
+      cont.innerHTML = equipos.map((e, i) => `
+        <div class="flex justify-between items-center py-2 ${i < equipos.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+          <div>
+            <p class="text-sm font-medium">${e.nombre}</p>
+            <p class="text-xs text-[var(--text-muted)]">${e.ubicacion || ''}</p>
+          </div>
+          <button onclick="recuperarEquipoClick('${e.id}')" class="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
+            <i class="fa-solid fa-rotate-left"></i> Recuperar
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function recuperarEquipoClick(id) {
+      const confirmado = confirm('¿Aceptar? Este equipo volverá a aparecer en Mantenimientos · Equipos.');
+      if (!confirmado) return;
+      const resultado = await recuperarEquipo(id);
+      if (!resultado.ok) { alert('Ocurrió un error al recuperar.'); return; }
+      renderEquiposEliminados();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(renderCorreos, 0);
+      renderProveedoresEliminados();
+      renderEquiposEliminados();
+    });
   </script>
 </body>
 </html>

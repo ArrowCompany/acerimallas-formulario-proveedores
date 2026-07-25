@@ -64,6 +64,7 @@
     function badgeFor(estado) {
       if (estado === 'verificado') return `<span class="status-verificado">Verificado</span>`;
       if (estado === 'no-verificado') return `<span class="status-no-verificado">No verificado</span>`;
+      if (estado === 'corregido') return `<span class="status-corregido">Corrección recibida</span>`;
       return `<span class="status-pendiente">Pendiente</span>`;
     }
 
@@ -85,6 +86,9 @@
             <h1 class="title-font text-2xl font-semibold">${p.razonSocial}</h1>
             <div class="mt-2">${badgeFor(p.estado)}</div>
           </div>
+          <button onclick="borrarProveedorActual()" class="btn-danger flex items-center gap-2 text-sm py-2 px-4">
+            <i class="fa-solid fa-trash"></i> Borrar
+          </button>
         </div>
 
         <p class="text-sm text-[var(--text-secondary)] mb-4">Marca la casilla del campo que tenga error</p>
@@ -121,6 +125,18 @@
           </button>
         </div>
       `;
+    }
+
+    async function borrarProveedorActual() {
+      if (!proveedorActual) return;
+      const confirmado = confirm(`¿Está seguro que desea borrar este proveedor? Se irá a la carpeta de Eliminados, desde ahí lo puede recuperar si lo desea.`);
+      if (!confirmado) return;
+
+      const resultado = await eliminarProveedor(proveedorActual.id);
+      if (!resultado.ok) { alert('Ocurrió un error al borrar. Intenta de nuevo.'); return; }
+
+      alert('Proveedor movido a la carpeta de Eliminados.');
+      window.location.href = 'panel_principal_secretaria.html';
     }
 
     async function marcarEstado(nuevoEstado) {

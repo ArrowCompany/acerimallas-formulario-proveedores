@@ -154,6 +154,7 @@
   <script src="js/store.js"></script>
   <script>
     let equipoSeleccionadoId = null;
+    let equipoEditandoId = null;
     let equiposCache = [];
     let mantenimientosCache = [];
     let tipoEquipoActual = null;
@@ -220,9 +221,11 @@
       cerrarSelectorTipo();
       tipoEquipoActual = tipo;
       contadorCamposOtro = 0;
+      equipoEditandoId = null;
 
       const config = CAMPOS_POR_TIPO[tipo];
       document.getElementById('tituloFormularioEquipo').textContent = 'Agregar equipo · ' + config.titulo;
+      document.querySelector('#formEquipo button[type="submit"]').textContent = 'Guardar equipo';
 
       const cont = document.getElementById('camposTipoEquipo');
       cont.innerHTML = config.campos.map(c => {
@@ -259,6 +262,51 @@
       document.getElementById('modalEquipo').classList.add('flex');
     }
 
+    function abrirFormularioEdicion() {
+      const equipo = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+      if (!equipo) return;
+
+      abrirFormularioTipo(equipo.tipo);
+      equipoEditandoId = equipo.id;
+
+      const config = CAMPOS_POR_TIPO[equipo.tipo];
+      document.getElementById('tituloFormularioEquipo').textContent = 'Editar equipo · ' + config.titulo;
+      document.querySelector('#formEquipo button[type="submit"]').textContent = 'Guardar cambios';
+
+      const datos = equipo.datosEspecificos || {};
+      config.campos.forEach(c => {
+        const el = document.querySelector(`#formEquipo [name="campo_${c.key}"]`);
+        if (el && datos[c.key] !== undefined) el.value = datos[c.key];
+      });
+
+      const selectIntervalo = document.querySelector('#formEquipo [name="intervaloMeses"]');
+      if (selectIntervalo) selectIntervalo.value = String(datos.intervaloMeses || 0);
+
+      if (equipo.tipo === 'otro' && Array.isArray(datos.camposCustom)) {
+        datos.camposCustom.forEach(c => {
+          agregarCampoOtro();
+          const filas = document.querySelectorAll('#listaCamposOtro > div');
+          const fila = filas[filas.length - 1];
+          fila.querySelector('.otro-campo-label').value = c.label;
+          fila.querySelector('.otro-campo-valor').value = c.valor;
+        });
+      }
+    }
+
+    async function eliminarEquipoActual() {
+      const equipo = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+      if (!equipo) return;
+
+      const confirmado = confirm(`¿Está seguro que desea borrar el equipo "${equipo.nombre}"? Se irá a la carpeta de Eliminados, desde ahí lo puede recuperar si lo desea.`);
+      if (!confirmado) return;
+
+      const resultado = await eliminarEquipo(equipo.id);
+      if (!resultado.ok) { alert('Error al eliminar el equipo.'); return; }
+
+      equipoSeleccionadoId = null;
+      renderListaEquipos();
+    }
+
     function agregarCampoOtro() {
       contadorCamposOtro++;
       const id = 'campoOtro_' + contadorCamposOtro;
@@ -275,6 +323,7 @@
       document.getElementById('modalEquipo').classList.add('hidden-el');
       document.getElementById('modalEquipo').classList.remove('flex');
       document.getElementById('formEquipo').reset();
+      equipoEditandoId = null;
     }
 
     document.getElementById('formEquipo').addEventListener('submit', async function(e) {
@@ -304,18 +353,34 @@
       const intervaloMeses = parseInt(fd.get('intervaloMeses') || '0', 10);
       datosEspecificos.intervaloMeses = intervaloMeses;
 
-      const resultado = await agregarEquipo({
+      const datosEquipo = {
         nombre: datosEspecificos.nombre || '',
         ubicacion: datosEspecificos.ubicacion || '',
-        proximoMantenimiento: intervaloMeses > 0 ? sumarMeses(new Date(), intervaloMeses) : '',
         tipo: tipoEquipoActual,
         datosEspecificos
-      });
+      };
+
+      let resultado;
+      if (equipoEditandoId) {
+        const equipoOriginal = equiposCache.find(e => String(e.id) === String(equipoEditandoId));
+        const intervaloAnterior = parseInt(equipoOriginal?.datosEspecificos?.intervaloMeses || 0, 10);
+        // Si no cambió la frecuencia, se conserva la fecha ya programada;
+        // si cambió, se recalcula desde hoy con la nueva frecuencia.
+        datosEquipo.proximoMantenimiento = intervaloMeses === 0
+          ? ''
+          : (intervaloMeses === intervaloAnterior && equipoOriginal?.proximoMantenimiento)
+            ? equipoOriginal.proximoMantenimiento
+            : sumarMeses(new Date(), intervaloMeses);
+        resultado = await actualizarEquipo(equipoEditandoId, datosEquipo);
+      } else {
+        datosEquipo.proximoMantenimiento = intervaloMeses > 0 ? sumarMeses(new Date(), intervaloMeses) : '';
+        resultado = await agregarEquipo(datosEquipo);
+      }
 
       submitBtn.disabled = false;
       if (!resultado.ok) { alert('Error al guardar el equipo.'); return; }
 
-      equipoSeleccionadoId = resultado.id;
+      equipoSeleccionadoId = equipoEditandoId || resultado.id;
       cerrarModalEquipo();
       renderListaEquipos();
     });
@@ -388,6 +453,8 @@
             <div>${datosExtra}${camposCustom}</div>
           </div>
           <div class="flex gap-2 flex-shrink-0">
+            <button onclick="abrirFormularioEdicion()" class="btn-secondary text-sm py-2 px-4"><i class="fa-solid fa-pen"></i> Editar</button>
+            <button onclick="eliminarEquipoActual()" class="btn-danger text-sm py-2 px-4"><i class="fa-solid fa-trash"></i> Eliminar</button>
             <button onclick="abrirModalMantenimiento()" class="btn-secondary text-sm py-2 px-4">+ Agregar mantenimiento</button>
             <button onclick="abrirModalSubirPdf()" class="btn-secondary text-sm py-2 px-4">Subir mantenimiento PDF</button>
           </div>
