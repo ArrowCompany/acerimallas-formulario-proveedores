@@ -491,7 +491,7 @@ function generarPdfMantenimiento(datos) {
       `<img src="data:image/png;base64,${f}" style="max-width:260px;max-height:260px;border:1px solid #E5E3DD;border-radius:8px;margin:0 10px 10px 0;">`
     ).join('');
     fotosHtml = `
-      <div class="seccion">EVIDENCIAS FOTOGRÁFICAS</div>
+      ${seccionHtml('EVIDENCIAS FOTOGRÁFICAS')}
       <div style="padding:4px 0 16px;">${imgs}</div>
     `;
   }
@@ -499,9 +499,26 @@ function generarPdfMantenimiento(datos) {
   let firmaHtml = '';
   if (datos.firmaBase64) {
     firmaHtml = `
-      <div class="seccion">FIRMA DEL CLIENTE</div>
+      ${seccionHtml('FIRMA DEL CLIENTE')}
       <div style="padding:10px 0;">
         <img src="data:image/png;base64,${datos.firmaBase64}" style="max-width:200px;max-height:100px;">
+      </div>
+    `;
+  }
+
+  // Franja divisoria de sección: el conversor de HTML a PDF de Apps Script
+  // ignora tanto el background-color de CSS como el bgcolor de las tablas,
+  // pero sí respeta imágenes — por eso la franja se hace con una imagen real
+  // (un PNG de 1x1 gris claro, estirado a lo ancho de la página).
+  const FRANJA_GRIS_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mN4//Y5AAWSAsSRR9hjAAAAAElFTkSuQmCC';
+
+  function seccionHtml(texto) {
+    return `
+      <div style="margin:20px 0 8px;">
+        <img src="data:image/png;base64,${FRANJA_GRIS_PNG}" width="535" height="4">
+        <div style="padding:6px 0 0;">
+          <font size="2" color="#1F1E1B"><b>${texto}</b></font>
+        </div>
       </div>
     `;
   }
@@ -512,13 +529,7 @@ function generarPdfMantenimiento(datos) {
       <meta charset="UTF-8">
       <style>
         body { font-family: Arial, sans-serif; color: #1F1E1B; margin: 0; }
-        .banner { background: #1F1E1B; color: #F8F7F4; padding: 24px 30px; }
-        .banner h1 { margin: 0 0 4px; font-size: 20px; }
-        .banner p { margin: 0; font-size: 12px; color: #A8A39A; }
-        .banner .fecha { margin-top: 8px; font-size: 10px; color: #6B6459; }
         .contenido { padding: 20px 30px 30px; }
-        .seccion { background: #EFEDE7; font-size: 11px; font-weight: bold; letter-spacing: 0.04em;
-                   padding: 8px 12px; margin: 18px 0 10px; }
         .fila { display: flex; padding: 4px 0; font-size: 12px; }
         .fila .label { width: 160px; color: #6B6459; }
         .fila .valor { font-weight: bold; }
@@ -526,27 +537,29 @@ function generarPdfMantenimiento(datos) {
       </style>
     </head>
     <body>
-      <div class="banner">
-        <h1>Acerimallas - Mantenimiento de Equipos</h1>
-        <p>Reporte de visita técnica</p>
-        <p class="fecha">Generado: ${new Date().toLocaleString('es-EC')}</p>
-      </div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td bgcolor="#1F1E1B" style="padding:24px 30px;">
+          <font color="#F8F7F4" size="5"><b>Acerimallas - Mantenimiento de Equipos</b></font><br>
+          <font color="#A8A39A" size="2">Reporte de visita técnica</font><br>
+          <font color="#6B6459" size="1">Generado: ${new Date().toLocaleString('es-EC')}</font>
+        </td></tr>
+      </table>
       <div class="contenido">
 
-        <div class="seccion">INFORMACIÓN DEL EQUIPO</div>
+        ${seccionHtml('INFORMACIÓN DEL EQUIPO')}
         <div class="fila"><span class="label">Equipo:</span><span class="valor">${escapar(datos.equipoNombre) || 'No especificado'}</span></div>
         <div class="fila"><span class="label">Ubicación:</span><span class="valor">${escapar(datos.equipoUbicacion) || 'No especificada'}</span></div>
 
-        <div class="seccion">SERVICIO</div>
+        ${seccionHtml('SERVICIO')}
         <div class="fila"><span class="label">Tipo:</span><span class="valor">${escapar(datos.tipo)}</span></div>
         <div class="fila"><span class="label">Fecha:</span><span class="valor">${escapar(datos.fecha)}</span></div>
         <div class="fila"><span class="label">Modo de pago:</span><span class="valor">${escapar(datos.modoPago) || 'No aplica'}</span></div>
         <div class="fila"><span class="label">Costo:</span><span class="valor">$${escapar(datos.costo) || '0.00'}</span></div>
 
-        <div class="seccion">DIAGNÓSTICO / ESTADO INICIAL</div>
+        ${seccionHtml('DIAGNÓSTICO / ESTADO INICIAL')}
         <div class="texto">${escapar(datos.observacion) || 'No especificado'}</div>
 
-        <div class="seccion">TRABAJO REALIZADO</div>
+        ${seccionHtml('TRABAJO REALIZADO')}
         <div class="texto">${escapar(datos.detalle) || 'No especificado'}</div>
 
         ${fotosHtml}
