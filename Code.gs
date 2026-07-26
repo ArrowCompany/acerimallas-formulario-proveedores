@@ -143,6 +143,9 @@ function doGet(e) {
     case 'listarAlertas':
       resultado = listarAlertas();
       break;
+    case 'obtenerArchivosProveedor':
+      resultado = obtenerArchivosProveedor(e.parameter.id);
+      break;
     case 'listarMantenimientos':
       resultado = listarMantenimientos(e.parameter.equipoId);
       break;
@@ -475,54 +478,88 @@ function listarMantenimientos(equipoId) {
   return { ok: true, mantenimientos: filtrados };
 }
 
-// Genera el PDF del mantenimiento con la misma estructura del reporte de
-// referencia: encabezado, sección de servicio, diagnóstico, trabajo
-// realizado, evidencias fotográficas y firma.
+// Genera el PDF del mantenimiento con el mismo estilo del reporte de
+// referencia: banner oscuro de encabezado, franjas grises por sección,
+// datos del equipo, servicio, diagnóstico, trabajo realizado, evidencias
+// fotográficas y firma. Se arma como HTML y se convierte a PDF.
 function generarPdfMantenimiento(datos) {
-  const doc = DocumentApp.create(`Mantenimiento_${datos.tipo}_${datos.fecha}`);
-  const body = doc.getBody();
+  const escapar = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  body.appendParagraph('Acerimallas - Mantenimiento de Equipos').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph('Reporte de visita técnica').setItalic(true);
-  body.appendParagraph(`Generado: ${new Date().toLocaleString('es-EC')}`).setFontSize(9);
-  body.appendParagraph('');
-
-  body.appendParagraph('SERVICIO').setHeading(DocumentApp.ParagraphHeading.HEADING3);
-  body.appendParagraph(`Tipo: ${datos.tipo}`);
-  body.appendParagraph(`Fecha: ${datos.fecha}`);
-  body.appendParagraph(`Modo de pago: ${datos.modoPago || 'No aplica'}`);
-  body.appendParagraph(`Costo: $${datos.costo || '0.00'}`);
-  body.appendParagraph('');
-
-  body.appendParagraph('DIAGNÓSTICO / ESTADO INICIAL').setHeading(DocumentApp.ParagraphHeading.HEADING3);
-  body.appendParagraph(datos.observacion || 'No especificado');
-  body.appendParagraph('');
-
-  body.appendParagraph('TRABAJO REALIZADO').setHeading(DocumentApp.ParagraphHeading.HEADING3);
-  body.appendParagraph(datos.detalle || 'No especificado');
-  body.appendParagraph('');
-
+  let fotosHtml = '';
   if (datos.fotosBase64 && datos.fotosBase64.length) {
-    body.appendParagraph('EVIDENCIAS FOTOGRÁFICAS').setHeading(DocumentApp.ParagraphHeading.HEADING3);
-    datos.fotosBase64.forEach(fotoB64 => {
-      const blob = Utilities.newBlob(Utilities.base64Decode(fotoB64), 'image/png', 'foto.png');
-      body.appendImage(blob).setWidth(300);
-    });
-    body.appendParagraph('');
+    const imgs = datos.fotosBase64.map(f =>
+      `<img src="data:image/png;base64,${f}" style="max-width:260px;max-height:260px;border:1px solid #E5E3DD;border-radius:8px;margin:0 10px 10px 0;">`
+    ).join('');
+    fotosHtml = `
+      <div class="seccion">EVIDENCIAS FOTOGRÁFICAS</div>
+      <div style="padding:4px 0 16px;">${imgs}</div>
+    `;
   }
 
+  let firmaHtml = '';
   if (datos.firmaBase64) {
-    body.appendParagraph('FIRMA DEL CLIENTE').setHeading(DocumentApp.ParagraphHeading.HEADING3);
-    const blob = Utilities.newBlob(Utilities.base64Decode(datos.firmaBase64), 'image/png', 'firma.png');
-    body.appendImage(blob).setWidth(200);
+    firmaHtml = `
+      <div class="seccion">FIRMA DEL CLIENTE</div>
+      <div style="padding:10px 0;">
+        <img src="data:image/png;base64,${datos.firmaBase64}" style="max-width:200px;max-height:100px;">
+      </div>
+    `;
   }
 
-  doc.saveAndClose();
-  const docFile = DriveApp.getFileById(doc.getId());
-  const pdfBlob = docFile.getAs('application/pdf');
+  const html = `
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; color: #1F1E1B; margin: 0; }
+        .banner { background: #1F1E1B; color: #F8F7F4; padding: 24px 30px; }
+        .banner h1 { margin: 0 0 4px; font-size: 20px; }
+        .banner p { margin: 0; font-size: 12px; color: #A8A39A; }
+        .banner .fecha { margin-top: 8px; font-size: 10px; color: #6B6459; }
+        .contenido { padding: 20px 30px 30px; }
+        .seccion { background: #EFEDE7; font-size: 11px; font-weight: bold; letter-spacing: 0.04em;
+                   padding: 8px 12px; margin: 18px 0 10px; }
+        .fila { display: flex; padding: 4px 0; font-size: 12px; }
+        .fila .label { width: 160px; color: #6B6459; }
+        .fila .valor { font-weight: bold; }
+        .texto { font-size: 12px; padding: 2px 0 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="banner">
+        <h1>Acerimallas - Mantenimiento de Equipos</h1>
+        <p>Reporte de visita técnica</p>
+        <p class="fecha">Generado: ${new Date().toLocaleString('es-EC')}</p>
+      </div>
+      <div class="contenido">
+
+        <div class="seccion">INFORMACIÓN DEL EQUIPO</div>
+        <div class="fila"><span class="label">Equipo:</span><span class="valor">${escapar(datos.equipoNombre) || 'No especificado'}</span></div>
+        <div class="fila"><span class="label">Ubicación:</span><span class="valor">${escapar(datos.equipoUbicacion) || 'No especificada'}</span></div>
+
+        <div class="seccion">SERVICIO</div>
+        <div class="fila"><span class="label">Tipo:</span><span class="valor">${escapar(datos.tipo)}</span></div>
+        <div class="fila"><span class="label">Fecha:</span><span class="valor">${escapar(datos.fecha)}</span></div>
+        <div class="fila"><span class="label">Modo de pago:</span><span class="valor">${escapar(datos.modoPago) || 'No aplica'}</span></div>
+        <div class="fila"><span class="label">Costo:</span><span class="valor">$${escapar(datos.costo) || '0.00'}</span></div>
+
+        <div class="seccion">DIAGNÓSTICO / ESTADO INICIAL</div>
+        <div class="texto">${escapar(datos.observacion) || 'No especificado'}</div>
+
+        <div class="seccion">TRABAJO REALIZADO</div>
+        <div class="texto">${escapar(datos.detalle) || 'No especificado'}</div>
+
+        ${fotosHtml}
+        ${firmaHtml}
+      </div>
+    </body>
+    </html>
+  `;
+
+  const blob = Utilities.newBlob(html, 'text/html', `Mantenimiento_${datos.tipo}_${datos.fecha}.html`);
+  const pdfBlob = blob.getAs('application/pdf');
   const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   const pdfFile = folder.createFile(pdfBlob);
-  docFile.setTrashed(true); // borra el Doc intermedio, solo deja el PDF
   return pdfFile.getUrl();
 }
 
@@ -607,6 +644,43 @@ function subirArchivoADrive(archivo, nombreBase) {
   const blob = Utilities.newBlob(Utilities.base64Decode(archivo.base64), archivo.tipo || 'application/pdf', nombreBase + '.pdf');
   const file = folder.createFile(blob);
   return file.getUrl();
+}
+
+// Trae los certificados PDF adjuntos de un proveedor directo desde Drive
+// (en base64), para poder unirlos en un solo PDF descargable desde la ficha.
+function obtenerArchivosProveedor(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Proveedores');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Proveedor no encontrado' };
+
+  const row = data[rowIndex];
+  const campos = {
+    archivoRuc: row[19],
+    archivoRepLegal: row[20],
+    archivoNombramiento: row[21],
+    certificadoBancario: row[22]
+  };
+
+  const archivos = {};
+  Object.keys(campos).forEach(key => {
+    const url = campos[key];
+    if (!url) return;
+    const match = String(url).match(/[-\w]{25,}/); // extrae el ID de Drive de la URL guardada
+    if (!match) return;
+    try {
+      const blob = DriveApp.getFileById(match[0]).getBlob();
+      archivos[key] = {
+        base64: Utilities.base64Encode(blob.getBytes()),
+        nombre: blob.getName(),
+        tipo: blob.getContentType()
+      };
+    } catch (e) {
+      // Si el archivo ya no existe o no es accesible, simplemente se omite
+    }
+  });
+
+  return { ok: true, archivos };
 }
 
 function obtenerCorreosAlerta() {

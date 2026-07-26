@@ -574,8 +574,12 @@
       // La firma sale del canvas dibujado en pantalla (no de un archivo)
       const firmaBase64 = canvasFirma.toDataURL('image/png').split(',')[1];
 
+      const equipoDelMantenimiento = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+
       const resultado = await agregarMantenimiento({
         equipoId: equipoSeleccionadoId,
+        equipoNombre: equipoDelMantenimiento?.nombre || '',
+        equipoUbicacion: equipoDelMantenimiento?.ubicacion || '',
         fecha: fd.get('fecha'), tipo: fd.get('tipo'),
         observacion: fd.get('observacion'), detalle: fd.get('detalle'),
         modoPago: fd.get('modoPago'), costo: fd.get('costo'),

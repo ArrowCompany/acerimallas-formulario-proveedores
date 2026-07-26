@@ -16,6 +16,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body class="bg-[var(--surface-1)] text-[var(--text-primary)] min-h-screen py-10">
   <div class="max-w-3xl mx-auto px-6">
@@ -89,9 +91,14 @@
               <i class="fa-solid fa-envelope"></i> Correo de registro: <strong>${p.correoRegistro || p.correoRetenciones || 'no registrado'}</strong>
             </p>
           </div>
-          <button onclick="borrarProveedorActual()" class="btn-danger flex items-center gap-2 text-sm py-2 px-4">
-            <i class="fa-solid fa-trash"></i> Borrar
-          </button>
+          <div class="flex gap-2">
+            <button id="btnDescargarPdf" onclick="descargarPdfProveedor()" class="btn-secondary flex items-center gap-2 text-sm py-2 px-4">
+              <i class="fa-solid fa-file-arrow-down"></i> Descargar PDF
+            </button>
+            <button onclick="borrarProveedorActual()" class="btn-danger flex items-center gap-2 text-sm py-2 px-4">
+              <i class="fa-solid fa-trash"></i> Borrar
+            </button>
+          </div>
         </div>
 
         <p class="text-sm text-[var(--text-secondary)] mb-4">Marca la casilla del campo que tenga error</p>
@@ -128,6 +135,103 @@
           </button>
         </div>
       `;
+    }
+
+    // Nombre de archivo limpio: "proveedor_nakory.pdf"
+    function nombreArchivoProveedor(p) {
+      const base = (p.nombreComercial || p.razonSocial || 'sin_nombre')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita tildes
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      return `proveedor_${base}.pdf`;
+    }
+
+    async function descargarPdfProveedor() {
+      if (!proveedorActual) return;
+      const p = proveedorActual;
+      const btn = document.getElementById('btnDescargarPdf');
+      const textoOriginal = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
+
+      try {
+        // 1. Hoja resumen con los 25 ítems del proveedor
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const margen = 40;
+        const anchoTexto = 515;
+        let y = margen;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text(`Ficha de proveedor - ${p.razonSocial || ''}`, margen, y);
+        y += 22;
+
+        doc.setFontSize(11);
+        doc.text(`Estado: ${p.estado || ''}`, margen, y);
+        y += 24;
+
+        doc.setFont('helvetica', 'normal');
+        CAMPOS.forEach(c => {
+          const valor = c.esArchivo
+            ? (p[c.key] ? 'Adjunto (ver certificado en las páginas siguientes)' : 'Sin archivo')
+            : (p[c.key] || '(vacío)');
+          const lineas = doc.splitTextToSize(`${c.label}: ${valor}`, anchoTexto);
+          if (y + lineas.length * 14 > 780) { doc.addPage(); y = margen; }
+          doc.text(lineas, margen, y);
+          y += lineas.length * 14 + 6;
+        });
+
+        if (p.observacion) {
+          const lineasObs = doc.splitTextToSize(`Observación: ${p.observacion}`, anchoTexto);
+          if (y + lineasObs.length * 14 > 780) { doc.addPage(); y = margen; }
+          doc.text(lineasObs, margen, y);
+        }
+
+        const resumenBytes = doc.output('arraybuffer');
+
+        // 2. Certificados adjuntos, traídos del backend
+        const archivos = await getArchivosProveedor(p.id);
+
+        // 3. Se unen todos en un solo PDF final
+        const { PDFDocument } = PDFLib;
+        const pdfFinal = await PDFDocument.create();
+
+        const resumenDoc = await PDFDocument.load(resumenBytes);
+        const paginasResumen = await pdfFinal.copyPages(resumenDoc, resumenDoc.getPageIndices());
+        paginasResumen.forEach(pg => pdfFinal.addPage(pg));
+
+        for (const key of ['archivoRuc', 'archivoRepLegal', 'archivoNombramiento', 'certificadoBancario']) {
+          const archivo = archivos[key];
+          if (!archivo) continue;
+          try {
+            const bytes = Uint8Array.from(atob(archivo.base64), c => c.charCodeAt(0));
+            const certDoc = await PDFDocument.load(bytes);
+            const paginas = await pdfFinal.copyPages(certDoc, certDoc.getPageIndices());
+            paginas.forEach(pg => pdfFinal.addPage(pg));
+          } catch (e) {
+            console.error('No se pudo agregar el certificado', key, e);
+          }
+        }
+
+        const pdfBytesFinal = await pdfFinal.save();
+        const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivoProveedor(p);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error(e);
+        alert('Ocurrió un error al generar el PDF.');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = textoOriginal;
     }
 
     async function borrarProveedorActual() {
