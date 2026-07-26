@@ -465,11 +465,26 @@
                 <p class="text-sm">${m.fecha}</p>
                 <p class="text-xs text-[var(--text-muted)]">${m.tipo}${m.origen === 'externo' ? ' · PDF externo' : ''}</p>
               </div>
-              <a href="${m.pdfUrl}" target="_blank"><i class="fa-solid fa-file-pdf" style="color:var(--accent)" title="Ver PDF"></i></a>
+              <div class="flex items-center gap-3">
+                <a href="${m.pdfUrl}" target="_blank"><i class="fa-solid fa-file-pdf" style="color:var(--accent)" title="Ver PDF"></i></a>
+                <button onclick="eliminarMantenimientoClick('${m.id}')" title="Eliminar" style="background:none;border:none;padding:0;width:auto;height:auto;">
+                  <i class="fa-solid fa-trash" style="color:var(--danger)"></i>
+                </button>
+              </div>
             </div>
           `).join('')}
         </div>
       `;
+    }
+
+    async function eliminarMantenimientoClick(id) {
+      const confirmado = confirm('¿Quiere borrar este mantenimiento? Se trasladará a la carpeta de eliminados, desde ahí lo puede recuperar si lo desea.');
+      if (!confirmado) return;
+
+      const resultado = await eliminarMantenimiento(id);
+      if (!resultado.ok) { alert('Ocurrió un error al eliminar.'); return; }
+
+      renderDetalleEquipo();
     }
 
     // ---- Modal mantenimiento manual (Nueva visita) ----

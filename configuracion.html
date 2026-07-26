@@ -73,6 +73,12 @@
       <p class="text-sm text-[var(--text-secondary)] mb-4">Si borraste un equipo por error, lo puedes recuperar aquí.</p>
       <div id="listaEquiposEliminados"></div>
     </div>
+
+    <div class="card p-6 mt-6">
+      <p class="font-medium mb-1">Mantenimientos eliminados</p>
+      <p class="text-sm text-[var(--text-secondary)] mb-4">Si borraste un mantenimiento por error, lo puedes recuperar aquí.</p>
+      <div id="listaMantenimientosEliminados"></div>
+    </div>
   </div>
 
   <script src="js/store.js"></script>
@@ -229,10 +235,43 @@
       renderEquiposEliminados();
     }
 
+    // ---- Papelera: mantenimientos eliminados ----
+    async function renderMantenimientosEliminados() {
+      const cont = document.getElementById('listaMantenimientosEliminados');
+      cont.innerHTML = `<p class="text-sm text-[var(--text-muted)]">Cargando...</p>`;
+      const mantenimientos = await getMantenimientosEliminados();
+
+      if (mantenimientos.length === 0) {
+        cont.innerHTML = `<p class="text-sm text-[var(--text-muted)] py-2">No hay mantenimientos eliminados.</p>`;
+        return;
+      }
+
+      cont.innerHTML = mantenimientos.map((m, i) => `
+        <div class="flex justify-between items-center py-2 ${i < mantenimientos.length - 1 ? 'border-b border-[var(--border)]' : ''}">
+          <div>
+            <p class="text-sm font-medium">${m.fecha}</p>
+            <p class="text-xs text-[var(--text-muted)]">${m.tipo || ''}</p>
+          </div>
+          <button onclick="recuperarMantenimientoClick('${m.id}')" class="btn-secondary text-sm py-2 px-4 flex items-center gap-2">
+            <i class="fa-solid fa-rotate-left"></i> Recuperar
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function recuperarMantenimientoClick(id) {
+      const confirmado = confirm('¿Aceptar? Este mantenimiento volverá a aparecer en el historial del equipo.');
+      if (!confirmado) return;
+      const resultado = await recuperarMantenimiento(id);
+      if (!resultado.ok) { alert('Ocurrió un error al recuperar.'); return; }
+      renderMantenimientosEliminados();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(renderCorreos, 0);
       renderProveedoresEliminados();
       renderEquiposEliminados();
+      renderMantenimientosEliminados();
     });
   </script>
 </body>
