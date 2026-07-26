@@ -561,47 +561,52 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando y generando PDF...';
 
-      const fotos = fd.getAll('fotos').filter(f => f && f.size > 0);
-      const fotosBase64 = [];
-      for (const foto of fotos) {
-        const encoded = await archivoABase64(foto);
-        if (encoded) fotosBase64.push(encoded.base64);
+      try {
+        const fotos = fd.getAll('fotos').filter(f => f && f.size > 0);
+        const fotosBase64 = [];
+        for (const foto of fotos) {
+          const encoded = await archivoABase64(foto);
+          if (encoded) fotosBase64.push(encoded.base64);
+        }
+
+        // La firma sale del canvas dibujado en pantalla (no de un archivo)
+        const firmaBase64 = canvasFirma.toDataURL('image/png').split(',')[1];
+
+        const equipoDelMantenimiento = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+
+        const resultado = await agregarMantenimiento({
+          equipoId: equipoSeleccionadoId,
+          equipoNombre: equipoDelMantenimiento?.nombre || '',
+          equipoUbicacion: equipoDelMantenimiento?.ubicacion || '',
+          fecha: fd.get('fecha'), tipo: fd.get('tipo'),
+          observacion: fd.get('observacion'), detalle: fd.get('detalle'),
+          modoPago: fd.get('modoPago'), costo: fd.get('costo'),
+          fotosBase64, firmaBase64,
+          origen: 'manual'
+        });
+
+        if (!resultado.ok) { alert('Error al guardar el mantenimiento.'); return; }
+
+        // Recalcula la próxima fecha de mantenimiento a partir de la frecuencia
+        // configurada en el equipo (si tiene mantenimiento periódico)
+        const equipoActual = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
+        const intervaloMeses = parseInt(equipoActual?.datosEspecificos?.intervaloMeses || 0, 10);
+        if (equipoActual && intervaloMeses > 0) {
+          const nuevaFecha = sumarMeses(new Date(fd.get('fecha') + 'T00:00:00'), intervaloMeses);
+          await actualizarProximoMantenimiento(equipoSeleccionadoId, nuevaFecha);
+          equipoActual.proximoMantenimiento = nuevaFecha;
+        }
+
+        cerrarModalMantenimiento();
+        renderDetalleEquipo();
+        alert('Visita guardada. El PDF se generó con los datos, fotos y firma ingresados.');
+      } catch (err) {
+        console.error(err);
+        alert('Ocurrió un error al guardar el mantenimiento. Intenta de nuevo.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Guardar visita';
       }
-
-      // La firma sale del canvas dibujado en pantalla (no de un archivo)
-      const firmaBase64 = canvasFirma.toDataURL('image/png').split(',')[1];
-
-      const equipoDelMantenimiento = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
-
-      const resultado = await agregarMantenimiento({
-        equipoId: equipoSeleccionadoId,
-        equipoNombre: equipoDelMantenimiento?.nombre || '',
-        equipoUbicacion: equipoDelMantenimiento?.ubicacion || '',
-        fecha: fd.get('fecha'), tipo: fd.get('tipo'),
-        observacion: fd.get('observacion'), detalle: fd.get('detalle'),
-        modoPago: fd.get('modoPago'), costo: fd.get('costo'),
-        fotosBase64, firmaBase64,
-        origen: 'manual'
-      });
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Guardar visita';
-
-      if (!resultado.ok) { alert('Error al guardar el mantenimiento.'); return; }
-
-      // Recalcula la próxima fecha de mantenimiento a partir de la frecuencia
-      // configurada en el equipo (si tiene mantenimiento periódico)
-      const equipoActual = equiposCache.find(e => String(e.id) === String(equipoSeleccionadoId));
-      const intervaloMeses = parseInt(equipoActual?.datosEspecificos?.intervaloMeses || 0, 10);
-      if (equipoActual && intervaloMeses > 0) {
-        const nuevaFecha = sumarMeses(new Date(fd.get('fecha') + 'T00:00:00'), intervaloMeses);
-        await actualizarProximoMantenimiento(equipoSeleccionadoId, nuevaFecha);
-        equipoActual.proximoMantenimiento = nuevaFecha;
-      }
-
-      cerrarModalMantenimiento();
-      renderDetalleEquipo();
-      alert('Visita guardada. El PDF se generó con los datos, fotos y firma ingresados.');
     });
 
     // ---- Modal subir PDF externo ----

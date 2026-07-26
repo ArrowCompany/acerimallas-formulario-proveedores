@@ -485,6 +485,23 @@ function listarMantenimientos(equipoId) {
 function generarPdfMantenimiento(datos) {
   const escapar = (t) => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+  // Franja divisoria de sección: el conversor de HTML a PDF de Apps Script
+  // ignora tanto el background-color de CSS como el bgcolor de las tablas,
+  // pero sí respeta imágenes — por eso la franja se hace con una imagen real
+  // (un PNG de 1x1 gris claro, estirado a lo ancho de la página).
+  const FRANJA_GRIS_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mN4//Y5AAWSAsSRR9hjAAAAAElFTkSuQmCC';
+
+  function seccionHtml(texto) {
+    return `
+      <div style="margin:20px 0 8px;">
+        <img src="data:image/png;base64,${FRANJA_GRIS_PNG}" width="535" height="4">
+        <div style="padding:6px 0 0;">
+          <font size="2" color="#1F1E1B"><b>${texto}</b></font>
+        </div>
+      </div>
+    `;
+  }
+
   let fotosHtml = '';
   if (datos.fotosBase64 && datos.fotosBase64.length) {
     const imgs = datos.fotosBase64.map(f =>
@@ -502,23 +519,6 @@ function generarPdfMantenimiento(datos) {
       ${seccionHtml('FIRMA DEL CLIENTE')}
       <div style="padding:10px 0;">
         <img src="data:image/png;base64,${datos.firmaBase64}" style="max-width:200px;max-height:100px;">
-      </div>
-    `;
-  }
-
-  // Franja divisoria de sección: el conversor de HTML a PDF de Apps Script
-  // ignora tanto el background-color de CSS como el bgcolor de las tablas,
-  // pero sí respeta imágenes — por eso la franja se hace con una imagen real
-  // (un PNG de 1x1 gris claro, estirado a lo ancho de la página).
-  const FRANJA_GRIS_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mN4//Y5AAWSAsSRR9hjAAAAAElFTkSuQmCC';
-
-  function seccionHtml(texto) {
-    return `
-      <div style="margin:20px 0 8px;">
-        <img src="data:image/png;base64,${FRANJA_GRIS_PNG}" width="535" height="4">
-        <div style="padding:6px 0 0;">
-          <font size="2" color="#1F1E1B"><b>${texto}</b></font>
-        </div>
       </div>
     `;
   }
