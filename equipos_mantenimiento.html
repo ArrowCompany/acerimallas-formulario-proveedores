@@ -92,6 +92,10 @@
         <input type="date" name="fecha" required style="padding:10px 14px;">
         <input type="text" name="tipo" placeholder="Tipo de servicio *" required style="padding:10px 14px;">
 
+        <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Próximo mantenimiento</p>
+        <input type="number" name="intervaloMeses" min="0" step="1" placeholder="Cada cuántos meses (ej: 6)" style="padding:10px 14px;">
+        <p class="text-xs text-[var(--text-muted)] -mt-1">0 = sin mantenimiento periódico. Avisamos por correo y en el sistema 1 semana antes y el mismo día.</p>
+
         <p class="text-xs text-[var(--text-secondary)] font-medium pt-1">Detalle del equipo</p>
         <textarea name="observacion" placeholder="¿Qué tenía? Estado del equipo..." rows="2" style="padding:10px 14px;"></textarea>
 
@@ -242,15 +246,8 @@
       // cada cuántos meses toca el mantenimiento y el sistema calcula la fecha
       // y envía las alertas automáticamente (1 semana antes y el mismo día).
       cont.innerHTML += `
-        <select name="intervaloMeses">
-          <option value="0">Sin mantenimiento periódico</option>
-          <option value="3">Cada 3 meses</option>
-          <option value="4">Cada 4 meses</option>
-          <option value="5">Cada 5 meses</option>
-          <option value="6">Cada 6 meses</option>
-          <option value="12">Cada 12 meses</option>
-        </select>
-        <p class="text-xs text-[var(--text-muted)] -mt-2">El sistema calculará la próxima fecha desde hoy y avisará 1 semana antes y el mismo día del mantenimiento.</p>
+        <input type="number" name="intervaloMeses" min="0" step="1" placeholder="Cada cuántos meses (ej: 6)" value="0">
+        <p class="text-xs text-[var(--text-muted)] -mt-2">Escribe cada cuántos meses debe repetirse este mantenimiento (0 = sin mantenimiento periódico). El sistema calculará la próxima fecha desde hoy y avisará 1 semana antes y el mismo día.</p>
       `;
 
       const contenedorOtro = document.getElementById('camposOtroContainer');
