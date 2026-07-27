@@ -92,11 +92,20 @@ function doPost(e) {
     case 'eliminarProveedor':
       resultado = eliminarProveedor(body.id);
       break;
+    case 'enviarLinkRegistroProveedor':
+      resultado = enviarLinkRegistroProveedor(body.correo, body.link);
+      break;
     case 'recuperarProveedor':
       resultado = recuperarProveedor(body.id);
       break;
     case 'marcarAlertasLeidas':
       resultado = marcarAlertasLeidas();
+      break;
+    case 'eliminarMantenimiento':
+      resultado = eliminarMantenimiento(body.id);
+      break;
+    case 'recuperarMantenimiento':
+      resultado = recuperarMantenimiento(body.id);
       break;
     case 'agregarMantenimiento':
       resultado = agregarMantenimiento(body.datos);
@@ -142,6 +151,9 @@ function doGet(e) {
       break;
     case 'listarAlertas':
       resultado = listarAlertas();
+      break;
+    case 'listarMantenimientosEliminados':
+      resultado = listarMantenimientosEliminados();
       break;
     case 'obtenerArchivosProveedor':
       resultado = obtenerArchivosProveedor(e.parameter.id);
@@ -465,7 +477,7 @@ function agregarMantenimiento(datos) {
 
   sheet.appendRow([
     id, datos.equipoId, datos.fecha, datos.tipo, datos.observacion || '', datos.detalle || '',
-    pdfUrl, datos.origen, datos.modoPago || '', datos.costo || ''
+    pdfUrl, datos.origen, datos.modoPago || '', datos.costo || '', false, new Date()
   ]);
   return { ok: true, id, pdfUrl };
 }
@@ -474,8 +486,41 @@ function listarMantenimientos(equipoId) {
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Mantenimientos');
   const data = sheet.getDataRange().getValues();
   data.shift();
-  const filtrados = equipoId ? data.filter(row => row[1] === equipoId) : data;
-  return { ok: true, mantenimientos: filtrados };
+  let activos = data.filter(row => row[10] !== true);
+  if (equipoId) activos = activos.filter(row => row[1] === equipoId);
+  return { ok: true, mantenimientos: activos };
+}
+
+function listarMantenimientosEliminados() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Mantenimientos');
+  const data = sheet.getDataRange().getValues();
+  data.shift();
+  const eliminados = data.filter(row => row[10] === true);
+  return { ok: true, mantenimientos: eliminados };
+}
+
+// Envía el mantenimiento a la carpeta de Eliminados (no borra el PDF, solo lo
+// oculta del historial hasta que se recupere)
+function eliminarMantenimiento(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Mantenimientos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Mantenimiento no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 11).setValue(true);
+  registrarAlerta(`Mantenimiento del ${data[rowIndex][2]} enviado a la carpeta de eliminados.`, 'info');
+  return { ok: true };
+}
+
+function recuperarMantenimiento(id) {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Mantenimientos');
+  const data = sheet.getDataRange().getValues();
+  const rowIndex = data.findIndex(row => row[0] === id);
+  if (rowIndex === -1) return { ok: false, error: 'Mantenimiento no encontrado' };
+
+  sheet.getRange(rowIndex + 1, 11).setValue(false);
+  registrarAlerta(`Mantenimiento del ${data[rowIndex][2]} fue recuperado.`, 'success');
+  return { ok: true };
 }
 
 // Genera el PDF del mantenimiento con el mismo estilo del reporte de
@@ -694,6 +739,17 @@ function obtenerArchivosProveedor(id) {
   });
 
   return { ok: true, archivos };
+}
+
+// Envía al proveedor el correo con el link de registro (botón "Compartir
+// link de registro" del panel principal)
+function enviarLinkRegistroProveedor(correo, link) {
+  MailApp.sendEmail({
+    to: correo,
+    subject: 'Invitación a registrarse como proveedor - Acerimallas',
+    body: `Estimado proveedor,\n\nPor favor dele clic al siguiente enlace para registrarse:\n${link}\n\nGracias.`
+  });
+  return { ok: true };
 }
 
 function obtenerCorreosAlerta() {
