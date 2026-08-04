@@ -305,7 +305,7 @@
       render();
     }
 
-    document.addEventListener('DOMContentLoaded', render);
+    document.addEventListener('DOMContentLoaded', () => { verificarLicenciaYBlequear(); render(); });
   </script>
 </body>
 </html>

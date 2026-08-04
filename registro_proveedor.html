@@ -476,7 +476,7 @@
 
     const tokenDeUrl = new URLSearchParams(window.location.search).get('token');
     if (tokenDeUrl) {
-      document.addEventListener('DOMContentLoaded', () => iniciarModoCorreccion(tokenDeUrl));
+      document.addEventListener('DOMContentLoaded', () => { verificarLicenciaYBlequear(); iniciarModoCorreccion(tokenDeUrl); });
     }
 
     document.getElementById('providerForm').addEventListener('submit', async function(e) {
